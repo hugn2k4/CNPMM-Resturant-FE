@@ -19,23 +19,58 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  // Listen for global logout events (dispatched from axios client when refresh fails)
+  useEffect(() => {
+    const handleAppLogout = () => {
+      performLogout();
+    };
+    window.addEventListener("app:logout", handleAppLogout);
+    return () => window.removeEventListener("app:logout", handleAppLogout);
+  }, []);
+
+  const performLogout = () => {
+    setState({ user: null, accessToken: null, isLogin: false });
+    try {
+      localStorage.removeItem("user");
+      localStorage.removeItem("accessToken");
+    } catch {
+      /* ignore */
+    }
+  };
+
   const setGlobal = (partial: Partial<GlobalState>) => {
     setState((prev) => {
       const newState = { ...prev, ...partial };
-      if (partial.user !== undefined) localStorage.setItem("user", JSON.stringify(newState.user));
-      if (partial.accessToken !== undefined) localStorage.setItem("accessToken", newState.accessToken || "");
+      if (partial.user !== undefined) {
+        try {
+          localStorage.setItem("user", JSON.stringify(newState.user));
+        } catch {
+          /* ignore */
+        }
+      }
+      if (partial.accessToken !== undefined) {
+        // Only write accessToken when non-empty, otherwise remove key
+        try {
+          if (newState.accessToken) localStorage.setItem("accessToken", newState.accessToken);
+          else localStorage.removeItem("accessToken");
+        } catch {
+          /* ignore */
+        }
+      }
       if (partial.isLogin === false) {
-        localStorage.removeItem("user");
-        localStorage.removeItem("accessToken");
+        try {
+          localStorage.removeItem("user");
+          localStorage.removeItem("accessToken");
+        } catch {
+          /* ignore */
+        }
       }
       return newState;
     });
   };
 
   const logout = () => {
-    setState({ user: null, accessToken: null, isLogin: false });
-    localStorage.removeItem("user");
-    localStorage.removeItem("accessToken");
+    performLogout();
   };
   return <GlobalContext.Provider value={{ ...state, setGlobal, logout }}>{children}</GlobalContext.Provider>;
 };

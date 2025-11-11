@@ -44,15 +44,6 @@ axiosClient.interceptors.request.use(
 let isRefreshing = false;
 let subscribers: ((token: string) => void)[] = [];
 
-function onAccessTokenFetched(newToken: string) {
-  subscribers.forEach((cb) => cb(newToken));
-  subscribers = [];
-}
-
-function addSubscriber(callback: (token: string) => void) {
-  subscribers.push(callback);
-}
-
 // ----- RESPONSE INTERCEPTOR -----
 axiosClient.interceptors.response.use(
   (response: AxiosResponse) => {
@@ -76,7 +67,7 @@ axiosClient.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve) => {
-          addSubscriber((newToken) => {
+          subscribers.push((newToken: string) => {
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
             resolve(axiosClient(originalRequest));
           });
@@ -88,19 +79,47 @@ axiosClient.interceptors.response.use(
 
       try {
         console.log(`🔄 [${reqId}] Refreshing token...`);
-        const res = await axiosClient.post("/auth/refresh-token");
+        // Use plain axios (no interceptors) to avoid re-entering this interceptor
+        const res = await axios.post(`${API_BASE_URL}/auth/refresh-token`, null, {
+          withCredentials: true,
+          headers: DEFAULT_HEADERS,
+        });
         const newAccessToken = res.data?.data?.accessToken || res.data?.accessToken;
-        localStorage.setItem("accessToken", newAccessToken);
 
-        onAccessTokenFetched(newAccessToken);
-        isRefreshing = false;
+        if (newAccessToken) {
+          try {
+            localStorage.setItem("accessToken", newAccessToken);
+          } catch {
+            /* ignore storage errors */
+          }
 
-        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-        return axiosClient(originalRequest);
+          // notify queued requests
+          subscribers.forEach((cb) => cb(newAccessToken));
+          subscribers = [];
+          isRefreshing = false;
+
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          return axiosClient(originalRequest);
+        }
+
+        throw new Error("Refresh did not return new access token");
       } catch (refreshError) {
         isRefreshing = false;
-        localStorage.removeItem("accessToken");
-        console.error(`❌ [${reqId}] Refresh token failed`);
+        subscribers = [];
+        try {
+          localStorage.removeItem("accessToken");
+        } catch {
+          /* ignore */
+        }
+        console.error(`❌ [${reqId}] Refresh token failed`, refreshError);
+
+        // Notify app to perform a global logout (update UI state)
+        try {
+          window.dispatchEvent(new Event("app:logout"));
+        } catch {
+          /* ignore in non-browser env */
+        }
+
         return Promise.reject(refreshError);
       }
     }
