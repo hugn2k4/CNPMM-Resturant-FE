@@ -4,6 +4,12 @@ import type { LoginResponse } from "../types/responses/auth.response";
 import axiosClient from "../utils/axiosClient";
 
 const authApi = {
+  register: (data: RegisterRequest): Promise<ApiResponse> =>
+    axiosClient.post("/auth/register", data).then((response) => response.data),
+
+  confirm: (data: ConfirmOTPRequest): Promise<ApiResponse> =>
+    axiosClient.post("/auth/confirm", data).then((response) => response.data),
+
   login: (data: LoginRequest): Promise<LoginResponse> =>
     axiosClient.post("/auth/login", data).then((response) => response.data),
 

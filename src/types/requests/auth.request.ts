@@ -15,3 +15,8 @@ export interface ForgotPasswordRequest {
   newPassword: string;
   otp: string;
 }
+
+export interface ConfirmOTPRequest {
+  email: string;
+  otp: string;
+}
