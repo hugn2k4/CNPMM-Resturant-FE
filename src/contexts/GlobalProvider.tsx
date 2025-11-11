@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { GlobalContext, type GlobalState } from "./GlobalContext";
+import axiosClient from "../utils/axiosClient";
 
 export const GlobalProvider = ({ children }: { children: ReactNode }) => {
   const [state, setState] = useState<GlobalState>({
@@ -16,7 +17,21 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
         accessToken: accessToken,
         isLogin: true,
       });
+      return;
     }
+
+    // Fallback: if no localStorage but httpOnly cookie exists, fetch current user
+    (async () => {
+      try {
+        const res = await axiosClient.get("/auth/me");
+        const user = res.data?.user || res.data?.data?.user;
+        if (user) {
+          setState({ user, accessToken: null, isLogin: true });
+        }
+      } catch {
+        // ignore
+      }
+    })();
   }, []);
 
   const setGlobal = (partial: Partial<GlobalState>) => {

@@ -1,24 +1,30 @@
-import { Apple as AppleIcon } from "@mui/icons-material";
+import { Apple as AppleIcon, Google as GoogleIcon } from "@mui/icons-material";
 import { Box } from "@mui/material";
-import GoogleColorIcon from "../../../assets/icons/GoogleColorIcon";
 import MyButton from "../../../components/common/Button";
+import { API_BASE_URL } from "../../../config";
 
 const SocialLoginButtons = () => {
+  const onLoginWithGoogle = () => {
+    window.location.href = `${API_BASE_URL}/auth/google`;
+  };
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mb: 3 }}>
       <MyButton
         fullWidth
         colorScheme="grey"
-        startIcon={<GoogleColorIcon sx={{ fontSize: 20 }} />}
-        sx={{ px: 0, py: 1.5, borderRadius: 0, textTransform: "none", fontWeight: "regular" }}
+        startIcon={<GoogleIcon />}
+        sx={{ py: 0.9, borderRadius: 0, textTransform: "none", fontWeight: "regular" }}
+        onClick={onLoginWithGoogle}
       >
         Sign in with Google
       </MyButton>
+
       <MyButton
         fullWidth
         colorScheme="grey"
         startIcon={<AppleIcon />}
-        sx={{ py: 1.5, borderRadius: 0, textTransform: "none", fontWeight: "regular" }}
+        sx={{ py: 0.9, borderRadius: 0, textTransform: "none", fontWeight: "regular" }}
       >
         Sign in with Apple
       </MyButton>
