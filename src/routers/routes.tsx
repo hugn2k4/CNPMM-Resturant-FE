@@ -8,6 +8,8 @@ import SignInPage from "../pages/Auth/SignInPage";
 import SignUpPage from "../pages/Auth/SignUpPage";
 import HomePage from "../pages/Home/HomePage";
 import NotFoundPage from "../pages/NotFound/NotFoundPage";
+import ProductListPage from "../pages/Product/ProductListPage";
+import ProductDetailPage from "../pages/Product/ProductDetailPage";
 import PublicRoute from "./PublicRoute";
 const router = createBrowserRouter([
   {
@@ -15,6 +17,8 @@ const router = createBrowserRouter([
     element: <App />,
     children: [
       { path: "", element: <HomePage /> },
+      { path: "products", element: <ProductListPage /> },
+      { path: "products/:id", element: <ProductDetailPage /> },
       { path: "*", element: <NotFoundPage /> },
       {
         element: <PublicRoute />,
