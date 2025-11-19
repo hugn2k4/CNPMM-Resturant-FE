@@ -10,6 +10,7 @@ import "swiper/swiper-bundle.css";
 import type { Product } from "../../types/models/product";
 import { formatVND } from "../../utils/format";
 import Button from "../../components/common/Button";
+import ProductCard from "../../components/common/ProductCard";
 import productService from "../../services/productService";
 
 export default function ProductDetailPage() {
@@ -17,10 +18,12 @@ export default function ProductDetailPage() {
   const navigate = useNavigate();
 
   const [product, setProduct] = useState<Product | null>(null);
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [thumbsSwiper, setThumbsSwiper] = useState<SwiperType | null>(null);
+  const [activeTab, setActiveTab] = useState<"description" | "reviews" | "info">("description");
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -31,6 +34,22 @@ export default function ProductDetailPage() {
       try {
         const data = await productService.getProductById(id);
         setProduct(data);
+
+        // Fetch related products based on category
+        if (data.categoryId?._id) {
+          try {
+            const relatedData = await productService.getProducts({
+              categoryId: data.categoryId._id,
+              limit: 8,
+              status: "available",
+            });
+            // Filter out current product
+            const filtered = relatedData.products.filter((p) => p._id !== data._id);
+            setRelatedProducts(filtered);
+          } catch (err) {
+            console.error("Error fetching related products:", err);
+          }
+        }
       } catch (err) {
         const error = err as Error;
         setError(error.message || "Không thể tải thông tin sản phẩm");
@@ -41,6 +60,8 @@ export default function ProductDetailPage() {
     };
 
     fetchProduct();
+    // Scroll to top when product changes
+    window.scrollTo(0, 0);
   }, [id]);
 
   if (loading) {
@@ -89,6 +110,10 @@ export default function ProductDetailPage() {
           <span>/</span>
           <Link to="/products" className="hover:text-orange-600">
             Sản phẩm
+          </Link>
+          <span>/</span>
+          <Link to={`/products?category=${product.categoryId?._id || ""}`} className="hover:text-orange-600">
+            {categoryName}
           </Link>
           <span>/</span>
           <span className="text-gray-800">{product.name}</span>
@@ -151,17 +176,28 @@ export default function ProductDetailPage() {
                 {product.rating && (
                   <div className="flex items-center gap-4 mb-4">
                     <div className="flex items-center gap-1">
-                      <svg className="w-5 h-5 text-yellow-400 fill-current" viewBox="0 0 20 20">
-                        <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
-                      </svg>
-                      <span className="text-lg font-medium text-gray-700">{product.rating.toFixed(1)}</span>
+                      {[...Array(5)].map((_, i) => (
+                        <svg
+                          key={i}
+                          className={`w-5 h-5 ${i < Math.floor(product.rating || 0) ? "text-yellow-400" : "text-gray-300"} fill-current`}
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
+                        </svg>
+                      ))}
+                      <span className="text-lg font-medium text-gray-700 ml-2">{product.rating.toFixed(1)}</span>
                     </div>
-                    {product.reviewCount && <span className="text-gray-500">({product.reviewCount} đánh giá)</span>}
+                    {product.reviewCount !== undefined && (
+                      <span className="text-gray-500">({product.reviewCount} đánh giá)</span>
+                    )}
+                    {product.soldCount !== undefined && (
+                      <span className="text-gray-500 ml-2">• Đã bán: {product.soldCount}</span>
+                    )}
                   </div>
                 )}
 
                 {/* Price */}
-                <div className="mb-6">
+                <div className="mb-6 bg-gray-50 p-4 rounded-lg">
                   <div className="flex items-baseline gap-3 mb-2">
                     <span className="text-lg text-gray-600">Đơn giá:</span>
                     <span className="text-2xl font-semibold text-gray-800">{formatVND(product.price)}</span>
@@ -170,48 +206,6 @@ export default function ProductDetailPage() {
                     <span className="text-lg text-gray-600">Tổng tiền:</span>
                     <span className="text-4xl font-bold text-orange-600">{formatVND(product.price * quantity)}</span>
                   </div>
-                </div>
-
-                {/* Description */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Mô tả</h3>
-                  <p className="text-gray-600 leading-relaxed">{product.description}</p>
-                </div>
-
-                {/* Additional Info */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  {product.preparationTime && (
-                    <div className="flex items-center gap-2">
-                      <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                      <div>
-                        <p className="text-sm text-gray-500">Thời gian chuẩn bị</p>
-                        <p className="font-medium text-gray-800">{product.preparationTime}</p>
-                      </div>
-                    </div>
-                  )}
-                  {product.calories && (
-                    <div className="flex items-center gap-2">
-                      <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M13 10V3L4 14h7v7l9-11h-7z"
-                        />
-                      </svg>
-                      <div>
-                        <p className="text-sm text-gray-500">Calo</p>
-                        <p className="font-medium text-gray-800">{product.calories} kcal</p>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* Stock Status */}
@@ -232,6 +226,42 @@ export default function ProductDetailPage() {
                   </div>
                   {!isOutOfStock && product.stock <= 5 && (
                     <p className="text-sm text-orange-600">⚠️ Số lượng có hạn, đặt ngay!</p>
+                  )}
+                </div>
+
+                {/* Additional Info Grid */}
+                <div className="grid grid-cols-2 gap-4 mb-6 bg-gray-50 p-4 rounded-lg">
+                  {product.preparationTime && (
+                    <div className="flex items-center gap-2">
+                      <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <div>
+                        <p className="text-sm text-gray-500">Thời gian</p>
+                        <p className="font-medium text-gray-800">{product.preparationTime}</p>
+                      </div>
+                    </div>
+                  )}
+                  {product.calories && (
+                    <div className="flex items-center gap-2">
+                      <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13 10V3L4 14h7v7l9-11h-7z"
+                        />
+                      </svg>
+                      <div>
+                        <p className="text-sm text-gray-500">Calo</p>
+                        <p className="font-medium text-gray-800">{product.calories} kcal</p>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -301,7 +331,104 @@ export default function ProductDetailPage() {
               </div>
             </div>
           </div>
+
+          {/* Tabs Section */}
+          <div className="border-t">
+            <div className="flex border-b">
+              <button
+                onClick={() => setActiveTab("description")}
+                className={`flex-1 px-6 py-4 font-semibold transition-colors ${
+                  activeTab === "description"
+                    ? "border-b-2 border-orange-500 text-orange-600"
+                    : "text-gray-600 hover:text-orange-600"
+                }`}
+              >
+                Mô tả sản phẩm
+              </button>
+              <button
+                onClick={() => setActiveTab("info")}
+                className={`flex-1 px-6 py-4 font-semibold transition-colors ${
+                  activeTab === "info"
+                    ? "border-b-2 border-orange-500 text-orange-600"
+                    : "text-gray-600 hover:text-orange-600"
+                }`}
+              >
+                Thông tin chi tiết
+              </button>
+              <button
+                onClick={() => setActiveTab("reviews")}
+                className={`flex-1 px-6 py-4 font-semibold transition-colors ${
+                  activeTab === "reviews"
+                    ? "border-b-2 border-orange-500 text-orange-600"
+                    : "text-gray-600 hover:text-orange-600"
+                }`}
+              >
+                Đánh giá ({product.reviewCount || 0})
+              </button>
+            </div>
+
+            <div className="p-6 lg:p-8">
+              {activeTab === "description" && (
+                <div className="prose max-w-none">
+                  <p className="text-gray-600 leading-relaxed">{product.description}</p>
+                </div>
+              )}
+
+              {activeTab === "info" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <div className="flex justify-between py-2 border-b">
+                      <span className="font-semibold text-gray-700">Danh mục:</span>
+                      <span className="text-gray-600">{categoryName}</span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b">
+                      <span className="font-semibold text-gray-700">Giá:</span>
+                      <span className="text-orange-600 font-bold">{formatVND(product.price)}</span>
+                    </div>
+                    {product.preparationTime && (
+                      <div className="flex justify-between py-2 border-b">
+                        <span className="font-semibold text-gray-700">Thời gian chuẩn bị:</span>
+                        <span className="text-gray-600">{product.preparationTime}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-3">
+                    {product.calories && (
+                      <div className="flex justify-between py-2 border-b">
+                        <span className="font-semibold text-gray-700">Calo:</span>
+                        <span className="text-gray-600">{product.calories} kcal</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between py-2 border-b">
+                      <span className="font-semibold text-gray-700">Tình trạng:</span>
+                      <span className={isOutOfStock ? "text-red-600" : "text-green-600"}>
+                        {isOutOfStock ? "Hết hàng" : "Còn hàng"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "reviews" && (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">Chưa có đánh giá nào cho sản phẩm này</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
+
+        {/* Related Products */}
+        {relatedProducts.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Sản phẩm liên quan</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {relatedProducts.slice(0, 4).map((relatedProduct) => (
+                <ProductCard key={relatedProduct._id} product={relatedProduct} />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

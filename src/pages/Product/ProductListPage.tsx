@@ -18,6 +18,13 @@ export default function ProductListPage() {
     totalPages: 0,
   });
 
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState<string>("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [priceRange, setPriceRange] = useState<{ min: number; max: number }>({ min: 0, max: 1000000 });
+  const [showFilters, setShowFilters] = useState(false);
+
   // Fetch categories
   useEffect(() => {
     const fetchCategories = async () => {
@@ -41,10 +48,16 @@ export default function ProductListPage() {
           page: pagination.page,
           limit: pagination.limit,
           status: "available",
+          sortBy,
+          sortOrder,
         };
 
         if (selectedCategory !== "ALL") {
           params.categoryId = selectedCategory;
+        }
+
+        if (searchTerm.trim()) {
+          params.search = searchTerm.trim();
         }
 
         const response = await productService.getProducts(params);
@@ -54,20 +67,49 @@ export default function ProductListPage() {
         console.error("Error fetching products:", err);
         const error = err as Error;
         setError(error.message || "Không thể tải danh sách sản phẩm");
-        // Hiển thị mock data nếu API không hoạt động
         setProducts([]);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProducts();
-  }, [selectedCategory, pagination.page, pagination.limit]);
+    const debounceTimer = setTimeout(() => {
+      fetchProducts();
+    }, 300);
+
+    return () => clearTimeout(debounceTimer);
+  }, [selectedCategory, pagination.page, pagination.limit, searchTerm, sortBy, sortOrder]);
 
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategory(categoryId);
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
+
+  const handleSortChange = (value: string) => {
+    const [field, order] = value.split("-");
+    setSortBy(field);
+    setSortOrder(order as "asc" | "desc");
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
+
+  const handleResetFilters = () => {
+    setSelectedCategory("ALL");
+    setSearchTerm("");
+    setSortBy("createdAt");
+    setSortOrder("desc");
+    setPriceRange({ min: 0, max: 1000000 });
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
+
+  // Filter products by price range (client-side)
+  const filteredProducts = products.filter(
+    (product) => product.price >= priceRange.min && product.price <= priceRange.max
+  );
 
   const categoryOptions = [
     { value: "ALL", label: "Tất cả" },
@@ -79,11 +121,123 @@ export default function ProductListPage() {
       : []),
   ];
 
+  const sortOptions = [
+    { value: "createdAt-desc", label: "Mới nhất" },
+    { value: "createdAt-asc", label: "Cũ nhất" },
+    { value: "price-asc", label: "Giá: Thấp đến cao" },
+    { value: "price-desc", label: "Giá: Cao đến thấp" },
+    { value: "name-asc", label: "Tên: A-Z" },
+    { value: "name-desc", label: "Tên: Z-A" },
+    { value: "soldCount-desc", label: "Bán chạy nhất" },
+    { value: "viewCount-desc", label: "Xem nhiều nhất" },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50">
       <PageHeader title="Thực đơn" />
 
       <div className="container mx-auto px-4 py-8">
+        {/* Search and Filter Bar */}
+        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Search Input */}
+            <div className="flex-1">
+              <div className="relative">
+                <svg
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm sản phẩm..."
+                  value={searchTerm}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+            </div>
+
+            {/* Sort Select */}
+            <div className="w-full lg:w-64">
+              <select
+                value={`${sortBy}-${sortOrder}`}
+                onChange={(e) => handleSortChange(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                {sortOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filter Toggle Button */}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                />
+              </svg>
+              {showFilters ? "Ẩn bộ lọc" : "Hiện bộ lọc"}
+            </button>
+          </div>
+
+          {/* Advanced Filters */}
+          {showFilters && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Price Range */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Khoảng giá</label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      placeholder="Tối thiểu"
+                      value={priceRange.min}
+                      onChange={(e) => setPriceRange({ ...priceRange, min: Number(e.target.value) })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                    <span className="text-gray-500">-</span>
+                    <input
+                      type="number"
+                      placeholder="Tối đa"
+                      value={priceRange.max}
+                      onChange={(e) => setPriceRange({ ...priceRange, max: Number(e.target.value) })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Reset Button */}
+                <div className="flex items-end">
+                  <button
+                    onClick={handleResetFilters}
+                    className="w-full px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    Đặt lại bộ lọc
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Category Filter */}
         <div className="mb-8">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Danh mục</h3>
@@ -107,7 +261,12 @@ export default function ProductListPage() {
         {/* Products Count */}
         <div className="mb-6">
           <p className="text-gray-600">
-            Tìm thấy <span className="font-semibold text-gray-800">{pagination.total}</span> sản phẩm
+            Tìm thấy <span className="font-semibold text-gray-800">{filteredProducts.length}</span> sản phẩm
+            {searchTerm && (
+              <span className="ml-2">
+                cho từ khóa "<span className="text-orange-600">{searchTerm}</span>"
+              </span>
+            )}
           </p>
         </div>
 
@@ -133,10 +292,10 @@ export default function ProductListPage() {
         )}
 
         {/* Products Grid */}
-        {!loading && !error && products.length > 0 && (
+        {!loading && !error && filteredProducts.length > 0 && (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {products.map((product) => (
+              {filteredProducts.map((product) => (
                 <ProductCard key={product._id} product={product} />
               ))}
             </div>
@@ -169,7 +328,7 @@ export default function ProductListPage() {
         )}
 
         {/* Empty State */}
-        {!loading && !error && products.length === 0 && (
+        {!loading && !error && filteredProducts.length === 0 && (
           <div className="text-center py-16">
             <svg className="w-24 h-24 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -180,7 +339,13 @@ export default function ProductListPage() {
               />
             </svg>
             <h3 className="text-xl font-semibold text-gray-700 mb-2">Không tìm thấy sản phẩm</h3>
-            <p className="text-gray-500">Vui lòng thử chọn danh mục khác</p>
+            <p className="text-gray-500 mb-4">Vui lòng thử chọn danh mục khác hoặc thay đổi bộ lọc</p>
+            <button
+              onClick={handleResetFilters}
+              className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+            >
+              Đặt lại bộ lọc
+            </button>
           </div>
         )}
       </div>

@@ -7,7 +7,6 @@ const productService = {
   async getProducts(params?: GetProductsParams) {
     try {
       const response = await productApi.getAll(params);
-      // API trả về { success, message, data }
       return response.data?.data || { products: [], pagination: { total: 0, page: 1, limit: 20, totalPages: 0 } };
     } catch (error) {
       console.error("Error in getProducts:", error);
@@ -42,6 +41,58 @@ const productService = {
     } catch (error) {
       console.error("Error in getProductsByCategory:", error);
       return { products: [], pagination: { total: 0, page: 1, limit: 20, totalPages: 0 } };
+    }
+  },
+
+  // ===== API TRANG CHỦ =====
+
+  async getHomePageData() {
+    try {
+      const response = await productApi.getHomePageData();
+      return response.data?.data || { newest: [], bestSelling: [], mostViewed: [], topDiscount: [] };
+    } catch (error) {
+      console.error("Error in getHomePageData:", error);
+      return { newest: [], bestSelling: [], mostViewed: [], topDiscount: [] };
+    }
+  },
+
+  async getNewestProducts(limit?: number) {
+    try {
+      const response = await productApi.getNewest(limit);
+      return response.data?.data || [];
+    } catch (error) {
+      console.error("Error in getNewestProducts:", error);
+      return [];
+    }
+  },
+
+  async getBestSellingProducts(limit?: number) {
+    try {
+      const response = await productApi.getBestSelling(limit);
+      return response.data?.data || [];
+    } catch (error) {
+      console.error("Error in getBestSellingProducts:", error);
+      return [];
+    }
+  },
+
+  async getMostViewedProducts(limit?: number) {
+    try {
+      const response = await productApi.getMostViewed(limit);
+      return response.data?.data || [];
+    } catch (error) {
+      console.error("Error in getMostViewedProducts:", error);
+      return [];
+    }
+  },
+
+  async getTopDiscountProducts(limit?: number) {
+    try {
+      const response = await productApi.getTopDiscount(limit);
+      return response.data?.data || [];
+    } catch (error) {
+      console.error("Error in getTopDiscountProducts:", error);
+      return [];
     }
   },
 
