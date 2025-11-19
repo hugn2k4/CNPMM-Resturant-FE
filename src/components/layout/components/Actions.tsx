@@ -5,7 +5,19 @@ import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import SearchIcon from "@mui/icons-material/Search";
 import ShoppingBagOutlinedIcon from "@mui/icons-material/ShoppingBagOutlined";
-import { Box, Divider, IconButton, ListItemIcon, ListItemText, Menu, MenuItem, Tooltip } from "@mui/material";
+import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
+import {
+  Avatar,
+  Box,
+  Divider,
+  IconButton,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGlobal } from "../../../hooks/useGlobal";
@@ -16,7 +28,7 @@ function Actions() {
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
-  const { isLogin, logout } = useGlobal();
+  const { isLogin, user, logout } = useGlobal();
   const { showSnackbar } = useSnackbar();
 
   const handleAccountClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -38,7 +50,12 @@ function Actions() {
   };
 
   const handleProfile = () => {
-    navigate("/account/dashboard");
+    navigate("/profile");
+    handleMenuClose();
+  };
+
+  const handleMyOrders = () => {
+    navigate("/my-orders");
     handleMenuClose();
   };
 
@@ -80,11 +97,54 @@ function Actions() {
         </IconButton>
       </Tooltip>
 
-      <Tooltip title="Account" arrow>
-        <IconButton aria-label="Account" onClick={handleAccountClick} sx={iconButtonSx}>
-          <PersonOutlineOutlinedIcon sx={{ fontSize: { xs: 20, md: 24 } }} />
-        </IconButton>
-      </Tooltip>
+      {isLogin ? (
+        <Tooltip title={user?.fullName || "Account"} arrow>
+          <Box
+            onClick={handleAccountClick}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              cursor: "pointer",
+              px: 1,
+              py: 0.5,
+              borderRadius: 1,
+              transition: "all 0.2s ease",
+              "&:hover": {
+                bgcolor: "rgba(255, 255, 255, 0.1)",
+              },
+            }}
+          >
+            <Avatar
+              src={user?.image || user?.avatar}
+              alt={user?.fullName || "User"}
+              sx={{
+                width: { xs: 32, md: 36 },
+                height: { xs: 32, md: 36 },
+                bgcolor: "var(--color-primary)",
+              }}
+            >
+              {user?.fullName?.charAt(0)?.toUpperCase() || "U"}
+            </Avatar>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "white",
+                display: { xs: "none", sm: "block" },
+                fontWeight: 500,
+              }}
+            >
+              {user?.fullName || "User"}
+            </Typography>
+          </Box>
+        </Tooltip>
+      ) : (
+        <Tooltip title="Account" arrow>
+          <IconButton aria-label="Account" onClick={handleAccountClick} sx={iconButtonSx}>
+            <PersonOutlineOutlinedIcon sx={{ fontSize: { xs: 20, md: 24 } }} />
+          </IconButton>
+        </Tooltip>
+      )}
 
       {/* Account Menu */}
       <Menu
@@ -115,6 +175,12 @@ function Actions() {
                   <AccountCircleOutlinedIcon fontSize="small" />
                 </ListItemIcon>
                 <ListItemText>Profile</ListItemText>
+              </MenuItem>,
+              <MenuItem key="orders" onClick={handleMyOrders}>
+                <ListItemIcon>
+                  <ShoppingCartOutlinedIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>My Orders</ListItemText>
               </MenuItem>,
               <Divider key="divider" />,
               <MenuItem key="logout" onClick={handleLogout}>

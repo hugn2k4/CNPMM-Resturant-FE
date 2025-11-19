@@ -8,4 +8,6 @@ export interface User {
   phoneNumber: string;
   gender?: Gender;
   role?: string;
+  image?: string;
+  avatar?: string;
 }

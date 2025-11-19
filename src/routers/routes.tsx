@@ -8,9 +8,13 @@ import SignInPage from "../pages/Auth/SignInPage";
 import SignUpPage from "../pages/Auth/SignUpPage";
 import HomePage from "../pages/Home/HomePage";
 import NotFoundPage from "../pages/NotFound/NotFoundPage";
-import ProductListPage from "../pages/Product/ProductListPage";
 import ProductDetailPage from "../pages/Product/ProductDetailPage";
+import ProductListPage from "../pages/Product/ProductListPage";
+import MyOrdersPage from "../pages/Profile/MyOrdersPage";
+import ProfilePage from "../pages/Profile/ProfilePage";
+import PrivateRoute from "./PrivateRoute";
 import PublicRoute from "./PublicRoute";
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -33,6 +37,13 @@ const router = createBrowserRouter([
               { path: "set-new-password", element: <SetNewPassword /> },
             ],
           },
+        ],
+      },
+      {
+        element: <PrivateRoute />,
+        children: [
+          { path: "profile", element: <ProfilePage /> },
+          { path: "my-orders", element: <MyOrdersPage /> },
         ],
       },
       { path: "dev", element: <Dev /> },
