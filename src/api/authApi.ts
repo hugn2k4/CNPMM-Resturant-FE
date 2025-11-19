@@ -1,4 +1,9 @@
-import type { ForgotPasswordRequest, LoginRequest } from "../types/requests/auth.request";
+import type {
+  ConfirmOTPRequest,
+  ForgotPasswordRequest,
+  LoginRequest,
+  RegisterRequest,
+} from "../types/requests/auth.request";
 import type { ApiResponse } from "../types/responses/api.response";
 import type { LoginResponse } from "../types/responses/auth.response";
 import axiosClient from "../utils/axiosClient";

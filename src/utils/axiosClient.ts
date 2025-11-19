@@ -64,7 +64,11 @@ axiosClient.interceptors.response.use(
     const reqId = originalRequest?.headers?.["X-Request-ID"] || "?";
 
     // ----- Handle 401 + Refresh token -----
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Skip refresh for login/register endpoints
+    const skipRefreshUrls = ["/auth/login", "/auth/register", "/auth/confirm"];
+    const shouldSkipRefresh = skipRefreshUrls.some((url) => originalRequest?.url?.includes(url));
+
+    if (error.response?.status === 401 && !originalRequest._retry && !shouldSkipRefresh) {
       if (isRefreshing) {
         return new Promise((resolve) => {
           subscribers.push((newToken: string) => {
