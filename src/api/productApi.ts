@@ -27,6 +27,13 @@ export interface ApiResponse<T> {
   data: T;
 }
 
+export interface HomePageData {
+  newest: Product[];
+  bestSelling: Product[];
+  mostViewed: Product[];
+  topDiscount: Product[];
+}
+
 const productApi = {
   // Lấy danh sách sản phẩm
   getAll: (params?: GetProductsParams) => {
@@ -49,6 +56,43 @@ const productApi = {
   getByCategory: (categoryId: string, params?: { page?: number; limit?: number }) => {
     return axiosClient.get<ApiResponse<ProductsResponse>>(`/products/category/${categoryId}`, { params });
   },
+
+  // ===== API TRANG CHỦ =====
+
+  // Lấy tất cả dữ liệu cho trang chủ
+  getHomePageData: () => {
+    return axiosClient.get<ApiResponse<HomePageData>>("/products/home");
+  },
+
+  // Lấy sản phẩm mới nhất
+  getNewest: (limit?: number) => {
+    return axiosClient.get<ApiResponse<Product[]>>("/products/newest", {
+      params: { limit },
+    });
+  },
+
+  // Lấy sản phẩm bán chạy nhất
+  getBestSelling: (limit?: number) => {
+    return axiosClient.get<ApiResponse<Product[]>>("/products/best-selling", {
+      params: { limit },
+    });
+  },
+
+  // Lấy sản phẩm được xem nhiều nhất
+  getMostViewed: (limit?: number) => {
+    return axiosClient.get<ApiResponse<Product[]>>("/products/most-viewed", {
+      params: { limit },
+    });
+  },
+
+  // Lấy sản phẩm khuyến mãi cao nhất
+  getTopDiscount: (limit?: number) => {
+    return axiosClient.get<ApiResponse<Product[]>>("/products/top-discount", {
+      params: { limit },
+    });
+  },
+
+  // ===== ADMIN APIs =====
 
   // Tạo sản phẩm mới
   create: (data: Partial<Product>) => {
