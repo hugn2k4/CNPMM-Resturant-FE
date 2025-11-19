@@ -1,5 +1,6 @@
 const menu = [
   { path: "/", label: "Home" },
+  { path: "/products", label: "Thực đơn" },
   { path: "/menu", label: "Menu " },
   { path: "/about", label: "About" },
   { path: "/shop", label: "Shop" },
