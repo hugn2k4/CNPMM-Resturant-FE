@@ -18,18 +18,41 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGlobal } from "../../../hooks/useGlobal";
 import { useSnackbar } from "../../../hooks/useSnackbar";
 import LoginRequiredDialog from "../../common/LoginRequiredDialog";
+import cartService from "../../../services/cartService";
 
 function Actions() {
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [cartItemCount, setCartItemCount] = useState(0);
   const { isLogin, user, logout } = useGlobal();
   const { showSnackbar } = useSnackbar();
+
+  // Fetch cart item count when user is logged in
+  useEffect(() => {
+    if (isLogin) {
+      const fetchCartCount = async () => {
+        try {
+          const count = await cartService.getCartItemCount();
+          setCartItemCount(count);
+        } catch (error) {
+          console.error("Error fetching cart count:", error);
+        }
+      };
+      fetchCartCount();
+
+      // Refresh cart count every 30 seconds
+      const interval = setInterval(fetchCartCount, 30000);
+      return () => clearInterval(interval);
+    } else {
+      setCartItemCount(0);
+    }
+  }, [isLogin]);
 
   const handleAccountClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -207,9 +230,32 @@ function Actions() {
       </Menu>
 
       <Tooltip title="Cart" arrow>
-        <IconButton aria-label="View cart" sx={iconButtonSx} onClick={handleCartClick}>
-          <ShoppingBagOutlinedIcon sx={{ fontSize: { xs: 20, md: 24 } }} />
-        </IconButton>
+        <Box sx={{ position: "relative" }}>
+          <IconButton aria-label="View cart" sx={iconButtonSx} onClick={handleCartClick}>
+            <ShoppingBagOutlinedIcon sx={{ fontSize: { xs: 20, md: 24 } }} />
+          </IconButton>
+          {isLogin && cartItemCount > 0 && (
+            <Box
+              sx={{
+                position: "absolute",
+                top: 4,
+                right: 4,
+                bgcolor: "var(--color-primary)",
+                color: "white",
+                borderRadius: "50%",
+                width: 20,
+                height: 20,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "0.75rem",
+                fontWeight: "bold",
+              }}
+            >
+              {cartItemCount > 99 ? "99+" : cartItemCount}
+            </Box>
+          )}
+        </Box>
       </Tooltip>
 
       {/* Login Required Dialog for Cart */}
