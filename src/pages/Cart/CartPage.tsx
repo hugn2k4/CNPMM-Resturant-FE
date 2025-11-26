@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { Cart, CartItem } from "../../types/models/cart";
-import cartService from "../../services/cartService";
-import { formatVND } from "../../utils/format";
-import { useSnackbar } from "../../hooks/useSnackbar";
 import Button from "../../components/common/Button";
+import { useSnackbar } from "../../hooks/useSnackbar";
+import cartService from "../../services/cartService";
+import type { Cart, CartItem } from "../../types/models/cart";
+import { formatVND } from "../../utils/format";
 
 interface ApiError {
   response?: {
@@ -248,16 +248,11 @@ export default function CartPage() {
                 </div>
               </div>
 
-              <Button
-                fullWidth
-                colorScheme="orange"
-                onClick={() => {
-                  showSnackbar("Tính năng thanh toán đang được phát triển", "info");
-                }}
-                className="mb-3"
-              >
-                Thanh toán
-              </Button>
+              <Link to="/checkout">
+                <Button fullWidth colorScheme="orange" className="mb-3">
+                  Thanh toán
+                </Button>
+              </Link>
 
               <Link to="/products" className="block text-center text-gray-600 hover:text-orange-600 transition-colors">
                 Tiếp tục mua sắm

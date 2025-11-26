@@ -1,6 +1,6 @@
-import { type ReactNode, useEffect, useState } from "react";
-import { GlobalContext, type GlobalState } from "./GlobalContext";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import axiosClient from "../utils/axiosClient";
+import { GlobalContext, type GlobalState } from "./GlobalContext";
 
 export const GlobalProvider = ({ children }: { children: ReactNode }) => {
   const [state, setState] = useState<GlobalState>({
@@ -87,5 +87,17 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     performLogout();
   };
-  return <GlobalContext.Provider value={{ ...state, setGlobal, logout }}>{children}</GlobalContext.Provider>;
+
+  const value = useMemo(
+    () => ({
+      user: state.user,
+      accessToken: state.accessToken,
+      isLogin: state.isLogin,
+      setGlobal,
+      logout,
+    }),
+    [state.user, state.accessToken, state.isLogin]
+  );
+
+  return <GlobalContext.Provider value={value}>{children}</GlobalContext.Provider>;
 };
