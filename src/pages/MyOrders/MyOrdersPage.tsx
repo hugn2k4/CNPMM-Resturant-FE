@@ -190,7 +190,7 @@ export default function MyOrdersPage() {
                 <div className="space-y-3 mb-4">
                   {order.items.slice(0, 2).map((item, index) => {
                     const product = typeof item.productId === "object" ? item.productId : null;
-                    const productImage = product?.listProductImage?.[0]?.url || "/placeholder.jpg";
+                    const productImage = item.image || "/placeholder.jpg";
                     const productName = product?.name || item.name || "Sản phẩm";
 
                     return (
