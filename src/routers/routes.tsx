@@ -6,12 +6,14 @@ import SetNewPassword from "../pages/Auth/components/SetNewPassword";
 import ForgotPasswordPage from "../pages/Auth/ForgotPasswordPage";
 import SignInPage from "../pages/Auth/SignInPage";
 import SignUpPage from "../pages/Auth/SignUpPage";
+import CartPage from "../pages/Cart/CartPage";
+import CheckoutPage from "../pages/Checkout/CheckoutPage";
 import HomePage from "../pages/Home/HomePage";
+import MyOrdersPage from "../pages/MyOrders/MyOrdersPage";
 import NotFoundPage from "../pages/NotFound/NotFoundPage";
+import OrderSuccessPage from "../pages/OrderSuccess/OrderSuccessPage";
 import ProductDetailPage from "../pages/Product/ProductDetailPage";
 import ProductListPage from "../pages/Product/ProductListPage";
-import CartPage from "../pages/Cart/CartPage";
-import MyOrdersPage from "../pages/Profile/MyOrdersPage";
 import ProfilePage from "../pages/Profile/ProfilePage";
 import PrivateRoute from "./PrivateRoute";
 import PublicRoute from "./PublicRoute";
@@ -44,8 +46,10 @@ const router = createBrowserRouter([
         element: <PrivateRoute />,
         children: [
           { path: "profile", element: <ProfilePage /> },
-          { path: "my-orders", element: <MyOrdersPage /> },
           { path: "cart", element: <CartPage /> },
+          { path: "checkout", element: <CheckoutPage /> },
+          { path: "order-success/:orderId", element: <OrderSuccessPage /> },
+          { path: "my-orders", element: <MyOrdersPage /> },
         ],
       },
       { path: "dev", element: <Dev /> },
