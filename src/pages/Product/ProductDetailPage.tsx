@@ -12,10 +12,16 @@ import { formatVND } from "../../utils/format";
 import Button from "../../components/common/Button";
 import ProductCard from "../../components/common/ProductCard";
 import productService from "../../services/productService";
+import cartService from "../../services/cartService";
+import { useGlobal } from "../../hooks/useGlobal";
+import { useSnackbar } from "../../hooks/useSnackbar";
+import LoginRequiredDialog from "../../components/common/LoginRequiredDialog";
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isLogin } = useGlobal();
+  const { showSnackbar } = useSnackbar();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
@@ -24,6 +30,8 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [thumbsSwiper, setThumbsSwiper] = useState<SwiperType | null>(null);
   const [activeTab, setActiveTab] = useState<"description" | "reviews" | "info">("description");
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -94,9 +102,25 @@ export default function ProductDetailPage() {
     }
   };
 
-  const handleAddToCart = () => {
-    // TODO: Implement add to cart functionality
-    alert(`Đã thêm ${quantity} ${product.name} vào giỏ hàng`);
+  const handleAddToCart = async () => {
+    if (!isLogin) {
+      setShowLoginDialog(true);
+      return;
+    }
+
+    if (!product || isOutOfStock) return;
+
+    try {
+      setAddingToCart(true);
+      await cartService.addItem(product._id, quantity);
+      showSnackbar(`Đã thêm ${quantity} ${product.name} vào giỏ hàng`, "success");
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      const apiError = error as { response?: { data?: { message?: string } } };
+      showSnackbar(apiError.response?.data?.message || "Không thể thêm vào giỏ hàng", "error");
+    } finally {
+      setAddingToCart(false);
+    }
   };
 
   return (
@@ -305,14 +329,23 @@ export default function ProductDetailPage() {
                 <div className="flex gap-4">
                   <Button
                     onClick={handleAddToCart}
-                    disabled={isOutOfStock}
+                    disabled={isOutOfStock || addingToCart}
                     className={`flex-1 py-4 text-lg font-semibold ${
                       isOutOfStock
                         ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                         : "bg-orange-500 text-white hover:bg-orange-600"
                     }`}
                   >
-                    {isOutOfStock ? "Hết hàng" : "Thêm vào giỏ hàng"}
+                    {addingToCart ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Đang thêm...
+                      </span>
+                    ) : isOutOfStock ? (
+                      "Hết hàng"
+                    ) : (
+                      "Thêm vào giỏ hàng"
+                    )}
                   </Button>
                   <button
                     className="px-6 py-4 border-2 border-orange-500 text-orange-500 rounded-lg hover:bg-orange-50 transition-colors"
@@ -430,6 +463,14 @@ export default function ProductDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Login Required Dialog */}
+      <LoginRequiredDialog
+        open={showLoginDialog}
+        onClose={() => setShowLoginDialog(false)}
+        message="Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng. Vui lòng đăng nhập hoặc tạo tài khoản mới."
+        returnUrl={`/products/${id}`}
+      />
     </div>
   );
 }

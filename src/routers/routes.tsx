@@ -10,6 +10,7 @@ import HomePage from "../pages/Home/HomePage";
 import NotFoundPage from "../pages/NotFound/NotFoundPage";
 import ProductDetailPage from "../pages/Product/ProductDetailPage";
 import ProductListPage from "../pages/Product/ProductListPage";
+import CartPage from "../pages/Cart/CartPage";
 import MyOrdersPage from "../pages/Profile/MyOrdersPage";
 import ProfilePage from "../pages/Profile/ProfilePage";
 import PrivateRoute from "./PrivateRoute";
@@ -44,6 +45,7 @@ const router = createBrowserRouter([
         children: [
           { path: "profile", element: <ProfilePage /> },
           { path: "my-orders", element: <MyOrdersPage /> },
+          { path: "cart", element: <CartPage /> },
         ],
       },
       { path: "dev", element: <Dev /> },
