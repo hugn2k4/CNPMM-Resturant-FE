@@ -113,6 +113,25 @@ const productApi = {
   updateStock: (id: string, quantity: number, operation: "set" | "increase" | "decrease" = "set") => {
     return axiosClient.patch<ApiResponse<Product>>(`/products/${id}/stock`, { quantity, operation });
   },
+
+  // Get similar products
+  getSimilar: (id: string, limit?: number) => {
+    return axiosClient.get<ApiResponse<Product[]>>(`/products/${id}/similar`, {
+      params: { limit },
+    });
+  },
+
+  // Log product view
+  logView: (id: string, sessionId?: string) => {
+    return axiosClient.post<ApiResponse<void>>(`/products/${id}/view`, { sessionId });
+  },
+
+  // Get recently viewed products
+  getRecent: (sessionId?: string, limit?: number) => {
+    return axiosClient.get<ApiResponse<{ views: unknown[]; products: Product[] }>>("/products/recent", {
+      params: { sessionId, limit },
+    });
+  },
 };
 
 export default productApi;

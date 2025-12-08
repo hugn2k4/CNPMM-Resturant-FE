@@ -1,17 +1,54 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { Product } from "../../types/models/product";
 import { formatVND } from "../../utils/format";
+import wishlistService from "../../services/wishlistService";
+import { useGlobal } from "../../hooks/useGlobal";
+import { useSnackbar } from "../../hooks/useSnackbar";
 
 interface ProductCardProps {
   product: Product;
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
+  const { isLogin, wishlistIds, refreshWishlist } = useGlobal();
+  const { showSnackbar } = useSnackbar();
+  const [togglingFavorite, setTogglingFavorite] = useState(false);
+
   const isOutOfStock = product.stock === 0 || product.status === "out_of_stock";
+  const isFavorited = wishlistIds.has(product._id);
 
   // Get category name from populated field or use default
   const categoryName = product.categoryId?.name || "Chưa phân loại";
   const mainImage = product.listProductImage?.[0]?.url || "/placeholder.jpg";
+
+  const handleToggleFavorite = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!isLogin) {
+      showSnackbar("Vui lòng đăng nhập để thêm vào yêu thích", "info");
+      return;
+    }
+
+    try {
+      setTogglingFavorite(true);
+      if (isFavorited) {
+        await wishlistService.removeItem(product._id);
+        await refreshWishlist();
+        showSnackbar("Đã xóa khỏi yêu thích", "success");
+      } else {
+        await wishlistService.addItem(product._id);
+        await refreshWishlist();
+        showSnackbar("Đã thêm vào yêu thích", "success");
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+      showSnackbar("Không thể cập nhật yêu thích", "error");
+    } finally {
+      setTogglingFavorite(false);
+    }
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300">
@@ -27,9 +64,35 @@ export default function ProductCard({ product }: ProductCardProps) {
               <span className="text-white font-bold text-xl">Hết hàng</span>
             </div>
           )}
-          <div className="absolute top-2 right-2 bg-orange-500 text-white px-2 py-1 rounded-md text-sm font-semibold">
+          <div className="absolute top-2 left-2 bg-orange-500 text-white px-2 py-1 rounded-md text-sm font-semibold">
             {categoryName}
           </div>
+          <button
+            onClick={handleToggleFavorite}
+            disabled={togglingFavorite}
+            className={`absolute top-2 right-2 p-2 rounded-full transition-all ${
+              isFavorited ? "bg-red-500 text-white hover:bg-red-600" : "bg-white text-gray-600 hover:bg-gray-100"
+            } ${togglingFavorite ? "opacity-50 cursor-not-allowed" : ""}`}
+            title={isFavorited ? "Xóa khỏi yêu thích" : "Thêm vào yêu thích"}
+          >
+            {togglingFavorite ? (
+              <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              <svg
+                className="w-5 h-5"
+                fill={isFavorited ? "currentColor" : "none"}
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                />
+              </svg>
+            )}
+          </button>
         </div>
       </Link>
 
