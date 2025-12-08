@@ -1,18 +1,23 @@
-import { LocalShipping, Payment, ShoppingCart } from "@mui/icons-material";
+import { LocalOffer, LocalShipping, Payment, ShoppingCart, Stars } from "@mui/icons-material";
 import {
+  Alert,
   Box,
+  Chip,
   Divider,
   FormControl,
   FormControlLabel,
   Paper,
   Radio,
   RadioGroup,
+  Slider,
   TextField,
   Typography,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
+import loyaltyApi from "../../api/loyaltyApi";
+import ApplyVoucherDialog from "../../components/common/ApplyVoucherDialog";
 import Button from "../../components/common/Button";
 import { useGlobal } from "../../hooks/useGlobal";
 import { useSnackbar } from "../../hooks/useSnackbar";
@@ -20,6 +25,7 @@ import cartService from "../../services/cartService";
 import orderService from "../../services/orderService";
 import type { Cart } from "../../types/models/cart";
 import type { CreateOrderRequest, ShippingAddress } from "../../types/models/order";
+import type { ILoyaltyAccount, IVoucher } from "../../types/models/voucher";
 import { formatVND } from "../../utils/format";
 
 type CheckoutFormData = ShippingAddress;
@@ -31,6 +37,15 @@ export default function CheckoutPage() {
   const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+
+  // Voucher & Loyalty states
+  const [voucherDialogOpen, setVoucherDialogOpen] = useState(false);
+  const [appliedVoucher, setAppliedVoucher] = useState<{ voucher: Partial<IVoucher>; discountAmount: number } | null>(
+    null
+  );
+  const [loyaltyAccount, setLoyaltyAccount] = useState<ILoyaltyAccount | null>(null);
+  const [pointsToUse, setPointsToUse] = useState(0);
+  const [potentialPoints, setPotentialPoints] = useState(0);
 
   const {
     control,
@@ -51,6 +66,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     fetchCart();
+    fetchLoyaltyAccount();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -60,6 +76,13 @@ export default function CheckoutPage() {
       setValue("phoneNumber", user.phoneNumber || "");
     }
   }, [user, setValue]);
+
+  useEffect(() => {
+    if (cart) {
+      calculatePotentialPoints();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart, appliedVoucher, pointsToUse]);
 
   const fetchCart = async () => {
     try {
@@ -78,6 +101,54 @@ export default function CheckoutPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchLoyaltyAccount = async () => {
+    try {
+      const response = await loyaltyApi.getLoyaltyAccount();
+      setLoyaltyAccount(response.data.data);
+    } catch (error) {
+      console.error("Error fetching loyalty account:", error);
+    }
+  };
+
+  const calculatePotentialPoints = async () => {
+    if (!cart) return;
+
+    try {
+      const finalAmount = calculateFinalAmount();
+      const response = await loyaltyApi.calculatePotentialPoints({ orderAmount: finalAmount });
+      setPotentialPoints(response.data.data.potentialPoints);
+    } catch (error) {
+      console.error("Error calculating potential points:", error);
+    }
+  };
+
+  const handleApplyVoucher = (voucher: IVoucher, discountAmount: number) => {
+    setAppliedVoucher({ voucher, discountAmount });
+    showSnackbar(`Đã áp dụng mã ${voucher.code || "giảm giá"}`, "success");
+  };
+
+  const handleRemoveVoucher = () => {
+    setAppliedVoucher(null);
+    showSnackbar("Đã xóa mã giảm giá", "info");
+  };
+
+  const handlePointsChange = (_: Event, value: number | number[]) => {
+    setPointsToUse(value as number);
+  };
+
+  const getPointsDiscount = () => {
+    if (!loyaltyAccount || !loyaltyAccount.conversionRate || pointsToUse === 0) return 0;
+    return pointsToUse * loyaltyAccount.conversionRate.currencyPerPoint;
+  };
+
+  const calculateFinalAmount = () => {
+    if (!cart) return 0;
+    const subtotal = cart.totalAmount + shippingFee;
+    const voucherDiscount = appliedVoucher?.discountAmount || 0;
+    const pointsDiscount = getPointsDiscount();
+    return Math.max(0, subtotal - voucherDiscount - pointsDiscount);
   };
 
   const shippingFee = 30000; // Phí ship cố định 30k
@@ -109,6 +180,8 @@ export default function CheckoutPage() {
         paymentMethod: "COD",
         totalAmount: cart.totalAmount,
         shippingFee: shippingFee,
+        voucherCode: appliedVoucher?.voucher?.code,
+        pointsToUse: pointsToUse > 0 ? pointsToUse : undefined,
         note: data.note,
       };
 
@@ -148,7 +221,14 @@ export default function CheckoutPage() {
     return null;
   }
 
-  const finalAmount = cart.totalAmount + shippingFee;
+  const subtotal = cart.totalAmount + shippingFee;
+  const voucherDiscount = appliedVoucher?.discountAmount || 0;
+  const pointsDiscount = getPointsDiscount();
+  const finalAmount = calculateFinalAmount();
+  const maxPointsToUse =
+    loyaltyAccount && loyaltyAccount.conversionRate
+      ? Math.min(loyaltyAccount.availablePoints, Math.floor(subtotal / loyaltyAccount.conversionRate.currencyPerPoint))
+      : 0;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -337,6 +417,99 @@ export default function CheckoutPage() {
 
                 <Divider className="my-4" />
 
+                {/* Voucher Section */}
+                <div className="mb-4 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <LocalOffer className="text-orange-600" fontSize="small" />
+                      <Typography variant="body2" className="font-semibold text-orange-800">
+                        Mã giảm giá
+                      </Typography>
+                    </div>
+                  </div>
+
+                  {appliedVoucher ? (
+                    <div className="bg-white p-2 rounded border border-orange-300">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Chip
+                            label={appliedVoucher.voucher?.code || "N/A"}
+                            color="warning"
+                            size="small"
+                            className="font-mono font-bold"
+                          />
+                          <Typography variant="caption" className="text-gray-600 block mt-1">
+                            Giảm {formatVND(appliedVoucher.discountAmount)}
+                          </Typography>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={handleRemoveVoucher}>
+                          Xóa
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      fullWidth
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setVoucherDialogOpen(true)}
+                      className="border-orange-300 text-orange-600 hover:bg-orange-50"
+                    >
+                      Chọn hoặc nhập mã
+                    </Button>
+                  )}
+                </div>
+
+                {/* Loyalty Points Section */}
+                {loyaltyAccount && loyaltyAccount.availablePoints > 0 && (
+                  <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Stars className="text-blue-600" fontSize="small" />
+                        <Typography variant="body2" className="font-semibold text-blue-800">
+                          Điểm tích lũy
+                        </Typography>
+                      </div>
+                      <Chip label={`${loyaltyAccount.availablePoints} điểm`} color="primary" size="small" />
+                    </div>
+
+                    <div className="bg-white p-3 rounded border border-blue-300">
+                      <Typography variant="caption" className="text-gray-600 block mb-2">
+                        Sử dụng điểm: {pointsToUse} điểm = {formatVND(pointsDiscount)}
+                      </Typography>
+                      <Slider
+                        value={pointsToUse}
+                        onChange={handlePointsChange}
+                        min={0}
+                        max={maxPointsToUse}
+                        step={10}
+                        marks={[
+                          { value: 0, label: "0" },
+                          { value: maxPointsToUse, label: maxPointsToUse.toString() },
+                        ]}
+                        valueLabelDisplay="auto"
+                        sx={{
+                          color: "#2196f3",
+                          "& .MuiSlider-thumb": {
+                            backgroundColor: "#2196f3",
+                          },
+                          "& .MuiSlider-track": {
+                            backgroundColor: "#2196f3",
+                          },
+                          "& .MuiSlider-rail": {
+                            backgroundColor: "#bbdefb",
+                          },
+                        }}
+                      />
+                      <Typography variant="caption" className="text-gray-500">
+                        Tối đa: {maxPointsToUse} điểm
+                      </Typography>
+                    </div>
+                  </div>
+                )}
+
+                <Divider className="my-4" />
+
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between">
                     <Typography className="text-gray-600">Tạm tính:</Typography>
@@ -346,6 +519,18 @@ export default function CheckoutPage() {
                     <Typography className="text-gray-600">Phí vận chuyển:</Typography>
                     <Typography className="font-medium">{formatVND(shippingFee)}</Typography>
                   </div>
+                  {voucherDiscount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <Typography>Giảm giá voucher:</Typography>
+                      <Typography className="font-medium">-{formatVND(voucherDiscount)}</Typography>
+                    </div>
+                  )}
+                  {pointsDiscount > 0 && (
+                    <div className="flex justify-between text-blue-600">
+                      <Typography>Giảm từ điểm:</Typography>
+                      <Typography className="font-medium">-{formatVND(pointsDiscount)}</Typography>
+                    </div>
+                  )}
                 </div>
 
                 <Divider className="my-4" />
@@ -363,6 +548,15 @@ export default function CheckoutPage() {
                   {submitting ? "Đang xử lý..." : "Đặt hàng"}
                 </Button>
 
+                {/* Potential Points Info */}
+                {potentialPoints > 0 && (
+                  <Alert severity="success" className="mt-3" icon={<Stars />}>
+                    <Typography variant="caption">
+                      Bạn sẽ nhận được <strong>{potentialPoints} điểm</strong> từ đơn hàng này!
+                    </Typography>
+                  </Alert>
+                )}
+
                 <Typography variant="caption" className="text-gray-500 text-center block mt-3">
                   Bằng việc đặt hàng, bạn đồng ý với Điều khoản sử dụng của chúng tôi
                 </Typography>
@@ -370,6 +564,23 @@ export default function CheckoutPage() {
             </div>
           </div>
         </form>
+
+        {/* Voucher Dialog */}
+        {cart && (
+          <ApplyVoucherDialog
+            open={voucherDialogOpen}
+            onClose={() => setVoucherDialogOpen(false)}
+            onApply={handleApplyVoucher}
+            orderData={{
+              subtotal: cart.totalAmount,
+              items: cart.items.map((item) => ({
+                product: typeof item.productId === "string" ? item.productId : item.productId._id,
+                quantity: item.quantity,
+                price: item.price,
+              })),
+            }}
+          />
+        )}
       </div>
     </div>
   );
