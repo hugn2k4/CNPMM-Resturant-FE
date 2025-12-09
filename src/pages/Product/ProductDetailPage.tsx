@@ -16,6 +16,7 @@ import cartService from "../../services/cartService";
 import { useGlobal } from "../../hooks/useGlobal";
 import { useSnackbar } from "../../hooks/useSnackbar";
 import LoginRequiredDialog from "../../components/common/LoginRequiredDialog";
+import ReviewSection from "../../components/common/ReviewSection";
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -29,7 +30,7 @@ export default function ProductDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [thumbsSwiper, setThumbsSwiper] = useState<SwiperType | null>(null);
-  const [activeTab, setActiveTab] = useState<"description" | "reviews" | "info">("description");
+  const [activeTab, setActiveTab] = useState<"description" | "info">("description");
   const [addingToCart, setAddingToCart] = useState(false);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
 
@@ -71,6 +72,19 @@ export default function ProductDetailPage() {
     // Scroll to top when product changes
     window.scrollTo(0, 0);
   }, [id]);
+
+  // Scroll to reviews section when hash is #reviews
+  useEffect(() => {
+    if (window.location.hash === "#reviews" && product) {
+      // Wait for page to load, then scroll
+      setTimeout(() => {
+        const reviewsSection = document.getElementById("reviews-section");
+        if (reviewsSection) {
+          reviewsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 500);
+    }
+  }, [product]);
 
   if (loading) {
     return (
@@ -388,16 +402,6 @@ export default function ProductDetailPage() {
               >
                 Thông tin chi tiết
               </button>
-              <button
-                onClick={() => setActiveTab("reviews")}
-                className={`flex-1 px-6 py-4 font-semibold transition-colors ${
-                  activeTab === "reviews"
-                    ? "border-b-2 border-orange-500 text-orange-600"
-                    : "text-gray-600 hover:text-orange-600"
-                }`}
-              >
-                Đánh giá ({product.reviewCount || 0})
-              </button>
             </div>
 
             <div className="p-6 lg:p-8">
@@ -441,15 +445,18 @@ export default function ProductDetailPage() {
                   </div>
                 </div>
               )}
-
-              {activeTab === "reviews" && (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">Chưa có đánh giá nào cho sản phẩm này</p>
-                </div>
-              )}
             </div>
           </div>
         </div>
+
+        {/* Reviews Section - Always visible below tabs */}
+        {product && (
+          <div id="reviews-section" className="mt-8 bg-white rounded-lg shadow-lg overflow-hidden">
+            <div className="p-6 lg:p-8">
+              <ReviewSection productId={product._id} />
+            </div>
+          </div>
+        )}
 
         {/* Related Products */}
         {relatedProducts.length > 0 && (

@@ -1,10 +1,12 @@
-import { CheckCircle, LocalShipping, Payment, ShoppingBag } from "@mui/icons-material";
+import { CheckCircle, LocalShipping, Payment, ShoppingBag, Star } from "@mui/icons-material";
 import { Chip, Divider, Paper, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Button from "../../components/common/Button";
 import { useSnackbar } from "../../hooks/useSnackbar";
+import { useGlobal } from "../../hooks/useGlobal";
 import orderService from "../../services/orderService";
+import reviewApi, { type Review } from "../../api/reviewApi";
 import type { Order } from "../../types/models/order";
 import { formatVND } from "../../utils/format";
 
@@ -12,14 +14,25 @@ export default function OrderSuccessPage() {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
+  const { user } = useGlobal();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userReviews, setUserReviews] = useState<Review[]>([]);
 
   useEffect(() => {
     if (orderId) {
       fetchOrderDetail();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
+
+  useEffect(() => {
+    // Fetch user reviews nếu order đã delivered và có user
+    if (order?.orderStatus === "delivered" && user?._id) {
+      fetchUserReviews();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order?.orderStatus, user?._id]);
 
   const fetchOrderDetail = async () => {
     if (!orderId) return;
@@ -34,6 +47,32 @@ export default function OrderSuccessPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchUserReviews = async () => {
+    if (!user?._id) return;
+
+    try {
+      const response = await reviewApi.getByUser(user._id, { page: 1, limit: 100 });
+      const apiResponse = response.data as { success?: boolean; data?: { reviews?: Review[] }; message?: string };
+      const reviews = apiResponse.data?.reviews || (apiResponse as { reviews?: Review[] })?.reviews || [];
+      setUserReviews(reviews);
+    } catch (error) {
+      console.error("Error fetching user reviews:", error);
+    }
+  };
+
+  const hasReviewedProduct = (productId: string | { _id: string }): boolean => {
+    if (typeof productId === "object") {
+      return userReviews.some((review) => review.productId === productId._id);
+    }
+    return userReviews.some((review) => review.productId === productId);
+  };
+
+  const handleReviewProduct = (productId: string | { _id: string }) => {
+    const id = typeof productId === "object" ? productId._id : productId;
+    // Navigate to product page với hash để scroll đến phần reviews
+    navigate(`/products/${id}#reviews`);
   };
 
   if (loading) {
@@ -172,6 +211,8 @@ export default function OrderSuccessPage() {
                 const product = typeof item.productId === "object" ? item.productId : null;
                 const productImage = item.image || "/placeholder.jpg";
                 const productName = product?.name || item.name || "Sản phẩm";
+                const productId = product?._id || (typeof item.productId === "string" ? item.productId : "");
+                const isReviewed = productId ? hasReviewedProduct(productId) : false;
 
                 return (
                   <div key={index} className="flex gap-4 p-3 bg-gray-50 rounded">
@@ -183,8 +224,31 @@ export default function OrderSuccessPage() {
                       </Typography>
                       <Typography className="text-orange-600 font-semibold">{formatVND(item.price)}</Typography>
                     </div>
-                    <div className="text-right">
-                      <Typography className="font-semibold">{formatVND(item.price * item.quantity)}</Typography>
+                    <div className="text-right flex flex-col items-end justify-between">
+                      <Typography className="font-semibold mb-2">{formatVND(item.price * item.quantity)}</Typography>
+                      {order.orderStatus === "delivered" && productId && (
+                        <div className="mt-2">
+                          {isReviewed ? (
+                            <Chip
+                              icon={<Star className="text-yellow-500" />}
+                              label="Đã đánh giá"
+                              color="success"
+                              size="small"
+                              className="cursor-default"
+                            />
+                          ) : (
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              startIcon={<Star />}
+                              onClick={() => handleReviewProduct(productId)}
+                              className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                            >
+                              Đánh giá
+                            </Button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
