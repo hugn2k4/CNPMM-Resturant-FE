@@ -1,4 +1,5 @@
 import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
+import FavoriteIcon from "@mui/icons-material/Favorite";
 import LoginIcon from "@mui/icons-material/Login";
 import LogoutIcon from "@mui/icons-material/Logout";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
@@ -79,6 +80,11 @@ function Actions() {
 
   const handleMyOrders = () => {
     navigate("/my-orders");
+    handleMenuClose();
+  };
+
+  const handleFavorites = () => {
+    navigate("/favorites");
     handleMenuClose();
   };
 
@@ -204,6 +210,12 @@ function Actions() {
                   <ShoppingCartOutlinedIcon fontSize="small" />
                 </ListItemIcon>
                 <ListItemText>My Orders</ListItemText>
+              </MenuItem>,
+              <MenuItem key="favorites" onClick={handleFavorites}>
+                <ListItemIcon>
+                  <FavoriteIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>My Favorites</ListItemText>
               </MenuItem>,
               <Divider key="divider" />,
               <MenuItem key="logout" onClick={handleLogout}>

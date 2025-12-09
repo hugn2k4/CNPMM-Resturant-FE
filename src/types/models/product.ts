@@ -50,6 +50,8 @@ export interface Product {
   finalPrice?: number;
   isDeleted?: boolean;
   isAvailable?: boolean;
+  total_buyers?: number;
+  total_comments?: number;
   createdAt?: string;
   updatedAt?: string;
 }

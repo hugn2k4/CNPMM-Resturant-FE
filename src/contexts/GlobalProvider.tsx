@@ -1,12 +1,14 @@
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import axiosClient from "../utils/axiosClient";
 import { GlobalContext, type GlobalState } from "./GlobalContext";
+import wishlistService from "../services/wishlistService";
 
 export const GlobalProvider = ({ children }: { children: ReactNode }) => {
   const [state, setState] = useState<GlobalState>({
     user: null,
     accessToken: null,
     isLogin: false,
+    wishlistIds: new Set<string>(),
   });
   useEffect(() => {
     const userStrorage = localStorage.getItem("user");
@@ -16,6 +18,7 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
         user: JSON.parse(userStrorage),
         accessToken: accessToken,
         isLogin: true,
+        wishlistIds: new Set<string>(),
       });
       return;
     }
@@ -26,13 +29,22 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
         const res = await axiosClient.get("/auth/me");
         const user = res.data?.user || res.data?.data?.user;
         if (user) {
-          setState({ user, accessToken: null, isLogin: true });
+          setState({ user, accessToken: null, isLogin: true, wishlistIds: new Set<string>() });
         }
       } catch {
         // ignore
       }
     })();
   }, []);
+
+  // Load wishlist when user logs in
+  useEffect(() => {
+    if (state.isLogin) {
+      refreshWishlist();
+    } else {
+      setState((prev) => ({ ...prev, wishlistIds: new Set<string>() }));
+    }
+  }, [state.isLogin]);
 
   // Listen for global logout events (dispatched from axios client when refresh fails)
   useEffect(() => {
@@ -43,8 +55,20 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
     return () => window.removeEventListener("app:logout", handleAppLogout);
   }, []);
 
+  const refreshWishlist = useCallback(async () => {
+    if (state.isLogin) {
+      try {
+        const productIds = await wishlistService.getWishlist();
+        setState((prev) => ({ ...prev, wishlistIds: new Set(productIds) }));
+      } catch (error) {
+        console.error("Error refreshing wishlist:", error);
+        setState((prev) => ({ ...prev, wishlistIds: new Set<string>() }));
+      }
+    }
+  }, [state.isLogin]);
+
   const performLogout = () => {
-    setState({ user: null, accessToken: null, isLogin: false });
+    setState({ user: null, accessToken: null, isLogin: false, wishlistIds: new Set<string>() });
     try {
       localStorage.removeItem("user");
       localStorage.removeItem("accessToken");
@@ -93,10 +117,12 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
       user: state.user,
       accessToken: state.accessToken,
       isLogin: state.isLogin,
+      wishlistIds: state.wishlistIds,
       setGlobal,
       logout,
+      refreshWishlist,
     }),
-    [state.user, state.accessToken, state.isLogin]
+    [state.user, state.accessToken, state.isLogin, state.wishlistIds]
   );
 
   return <GlobalContext.Provider value={value}>{children}</GlobalContext.Provider>;
