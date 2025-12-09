@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination, Thumbs } from "swiper/modules";
 import type { Swiper as SwiperType } from "swiper";
@@ -17,12 +17,24 @@ import wishlistService from "../../services/wishlistService";
 import { useGlobal } from "../../hooks/useGlobal";
 import { useSnackbar } from "../../hooks/useSnackbar";
 import LoginRequiredDialog from "../../components/common/LoginRequiredDialog";
+import ReviewSection from "../../components/common/ReviewSection";
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { isLogin, wishlistIds, refreshWishlist } = useGlobal();
   const { showSnackbar } = useSnackbar();
+
+  // Lấy orderId từ URL query params nếu có
+  const orderId = searchParams.get("orderId") || undefined;
+
+  // Debug: log orderId để kiểm tra
+  useEffect(() => {
+    if (orderId) {
+      console.log("OrderId from URL:", orderId);
+    }
+  }, [orderId]);
 
   const [product, setProduct] = useState<Product | null>(null);
   const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
@@ -31,7 +43,7 @@ export default function ProductDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [thumbsSwiper, setThumbsSwiper] = useState<SwiperType | null>(null);
-  const [activeTab, setActiveTab] = useState<"description" | "reviews" | "info">("description");
+  const [activeTab, setActiveTab] = useState<"description" | "info">("description");
   const [addingToCart, setAddingToCart] = useState(false);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [togglingFavorite, setTogglingFavorite] = useState(false);
@@ -83,6 +95,19 @@ export default function ProductDetailPage() {
     // Scroll to top when product changes
     window.scrollTo(0, 0);
   }, [id]);
+
+  // Scroll to reviews section when hash is #reviews
+  useEffect(() => {
+    if (window.location.hash === "#reviews" && product) {
+      // Wait for page to load, then scroll
+      setTimeout(() => {
+        const reviewsSection = document.getElementById("reviews-section");
+        if (reviewsSection) {
+          reviewsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 500);
+    }
+  }, [product]);
 
   if (loading) {
     return (
@@ -447,16 +472,6 @@ export default function ProductDetailPage() {
               >
                 Thông tin chi tiết
               </button>
-              <button
-                onClick={() => setActiveTab("reviews")}
-                className={`flex-1 px-6 py-4 font-semibold transition-colors ${
-                  activeTab === "reviews"
-                    ? "border-b-2 border-orange-500 text-orange-600"
-                    : "text-gray-600 hover:text-orange-600"
-                }`}
-              >
-                Đánh giá ({product.reviewCount || 0})
-              </button>
             </div>
 
             <div className="p-6 lg:p-8">
@@ -500,30 +515,21 @@ export default function ProductDetailPage() {
                   </div>
                 </div>
               )}
-
-              {activeTab === "reviews" && (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">Chưa có đánh giá nào cho sản phẩm này</p>
-                </div>
-              )}
             </div>
           </div>
         </div>
 
-        {/* Similar Products */}
-        {similarProducts.length > 0 && (
-          <div className="mt-12">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Sản phẩm tương tự</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {similarProducts.slice(0, 8).map((similarProduct) => (
-                <ProductCard key={similarProduct._id} product={similarProduct} />
-              ))}
+        {/* Reviews Section - Always visible below tabs */}
+        {product && (
+          <div id="reviews-section" className="mt-8 bg-white rounded-lg shadow-lg overflow-hidden">
+            <div className="p-6 lg:p-8">
+              <ReviewSection productId={product._id} orderId={orderId} />
             </div>
           </div>
         )}
 
-        {/* Recently Viewed Products */}
-        {recentlyViewed.length > 0 && (
+        {/* Related Products */}
+        {relatedProducts.length > 0 && (
           <div className="mt-12">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Đã xem gần đây</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
