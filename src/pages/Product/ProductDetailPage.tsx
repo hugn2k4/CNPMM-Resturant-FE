@@ -13,6 +13,7 @@ import Button from "../../components/common/Button";
 import ProductCard from "../../components/common/ProductCard";
 import productService from "../../services/productService";
 import cartService from "../../services/cartService";
+import wishlistService from "../../services/wishlistService";
 import { useGlobal } from "../../hooks/useGlobal";
 import { useSnackbar } from "../../hooks/useSnackbar";
 import LoginRequiredDialog from "../../components/common/LoginRequiredDialog";
@@ -22,7 +23,7 @@ export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { isLogin } = useGlobal();
+  const { isLogin, wishlistIds, refreshWishlist } = useGlobal();
   const { showSnackbar } = useSnackbar();
 
   // Lấy orderId từ URL query params nếu có
@@ -36,7 +37,8 @@ export default function ProductDetailPage() {
   }, [orderId]);
 
   const [product, setProduct] = useState<Product | null>(null);
-  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
+  const [recentlyViewed, setRecentlyViewed] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
@@ -44,6 +46,7 @@ export default function ProductDetailPage() {
   const [activeTab, setActiveTab] = useState<"description" | "info">("description");
   const [addingToCart, setAddingToCart] = useState(false);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [togglingFavorite, setTogglingFavorite] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -55,20 +58,29 @@ export default function ProductDetailPage() {
         const data = await productService.getProductById(id);
         setProduct(data);
 
-        // Fetch related products based on category
-        if (data.categoryId?._id) {
-          try {
-            const relatedData = await productService.getProducts({
-              categoryId: data.categoryId._id,
-              limit: 8,
-              status: "available",
-            });
-            // Filter out current product
-            const filtered = relatedData.products.filter((p) => p._id !== data._id);
-            setRelatedProducts(filtered);
-          } catch (err) {
-            console.error("Error fetching related products:", err);
-          }
+        // Log product view
+        const sessionId = document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("sessionId="))
+          ?.split("=")[1];
+        productService.logProductView(id, sessionId);
+
+        // Fetch similar products
+        try {
+          const similar = await productService.getSimilarProducts(id, 8);
+          setSimilarProducts(similar);
+        } catch (err) {
+          console.error("Error fetching similar products:", err);
+        }
+
+        // Fetch recently viewed products
+        try {
+          const recent = await productService.getRecentViews(sessionId, 8);
+          // Filter out current product
+          const filtered = recent.products.filter((p) => p._id !== id);
+          setRecentlyViewed(filtered);
+        } catch (err) {
+          console.error("Error fetching recently viewed:", err);
         }
       } catch (err) {
         const error = err as Error;
@@ -119,6 +131,7 @@ export default function ProductDetailPage() {
   const maxQuantity = Math.min(product.stock, 99);
   const categoryName = product.categoryId?.name || "Chưa phân loại";
   const productImages = product.listProductImage?.map((img) => img.url) || [];
+  const isFavorited = wishlistIds.has(product._id);
 
   const handleQuantityChange = (delta: number) => {
     const newQuantity = quantity + delta;
@@ -145,6 +158,34 @@ export default function ProductDetailPage() {
       showSnackbar(apiError.response?.data?.message || "Không thể thêm vào giỏ hàng", "error");
     } finally {
       setAddingToCart(false);
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!isLogin) {
+      setShowLoginDialog(true);
+      return;
+    }
+
+    if (!product) return;
+
+    try {
+      setTogglingFavorite(true);
+      if (isFavorited) {
+        await wishlistService.removeItem(product._id);
+        await refreshWishlist();
+        showSnackbar("Đã xóa khỏi danh sách yêu thích", "success");
+      } else {
+        await wishlistService.addItem(product._id);
+        await refreshWishlist();
+        showSnackbar("Đã thêm vào danh sách yêu thích", "success");
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+      const apiError = error as { response?: { data?: { message?: string } } };
+      showSnackbar(apiError.response?.data?.message || "Không thể cập nhật yêu thích", "error");
+    } finally {
+      setTogglingFavorite(false);
     }
   };
 
@@ -223,7 +264,7 @@ export default function ProductDetailPage() {
 
                 {/* Rating and Reviews */}
                 {product.rating && (
-                  <div className="flex items-center gap-4 mb-4">
+                  <div className="flex items-center gap-4 mb-4 flex-wrap">
                     <div className="flex items-center gap-1">
                       {[...Array(5)].map((_, i) => (
                         <svg
@@ -236,8 +277,11 @@ export default function ProductDetailPage() {
                       ))}
                       <span className="text-lg font-medium text-gray-700 ml-2">{product.rating.toFixed(1)}</span>
                     </div>
-                    {product.reviewCount !== undefined && (
-                      <span className="text-gray-500">({product.reviewCount} đánh giá)</span>
+                    {product.total_comments !== undefined && (
+                      <span className="text-gray-500">({product.total_comments} đánh giá)</span>
+                    )}
+                    {product.total_buyers !== undefined && (
+                      <span className="text-gray-500 ml-2">• {product.total_buyers} người đã mua</span>
                     )}
                     {product.soldCount !== undefined && (
                       <span className="text-gray-500 ml-2">• Đã bán: {product.soldCount}</span>
@@ -373,17 +417,32 @@ export default function ProductDetailPage() {
                     )}
                   </Button>
                   <button
-                    className="px-6 py-4 border-2 border-orange-500 text-orange-500 rounded-lg hover:bg-orange-50 transition-colors"
-                    title="Yêu thích"
+                    onClick={handleToggleFavorite}
+                    disabled={togglingFavorite}
+                    className={`px-6 py-4 border-2 rounded-lg transition-colors ${
+                      isFavorited
+                        ? "border-red-500 text-red-500 bg-red-50 hover:bg-red-100"
+                        : "border-orange-500 text-orange-500 hover:bg-orange-50"
+                    } ${togglingFavorite ? "opacity-50 cursor-not-allowed" : ""}`}
+                    title={isFavorited ? "Xóa khỏi yêu thích" : "Thêm vào yêu thích"}
                   >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                      />
-                    </svg>
+                    {togglingFavorite ? (
+                      <div className="w-6 h-6 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <svg
+                        className="w-6 h-6"
+                        fill={isFavorited ? "currentColor" : "none"}
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                        />
+                      </svg>
+                    )}
                   </button>
                 </div>
               </div>
@@ -472,10 +531,10 @@ export default function ProductDetailPage() {
         {/* Related Products */}
         {relatedProducts.length > 0 && (
           <div className="mt-12">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Sản phẩm liên quan</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Đã xem gần đây</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {relatedProducts.slice(0, 4).map((relatedProduct) => (
-                <ProductCard key={relatedProduct._id} product={relatedProduct} />
+              {recentlyViewed.slice(0, 8).map((recentProduct) => (
+                <ProductCard key={recentProduct._id} product={recentProduct} />
               ))}
             </div>
           </div>

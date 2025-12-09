@@ -10,6 +10,7 @@ import CartPage from "../pages/Cart/CartPage";
 import CheckoutPage from "../pages/Checkout/CheckoutPage";
 import HomePage from "../pages/Home/HomePage";
 import LoyaltyPointsPage from "../pages/LoyaltyPoints";
+import MyFavoritesPage from "../pages/Favorites/MyFavoritesPage";
 import MyOrdersPage from "../pages/MyOrders/MyOrdersPage";
 import NotFoundPage from "../pages/NotFound/NotFoundPage";
 import OrderSuccessPage from "../pages/OrderSuccess/OrderSuccessPage";
@@ -52,6 +53,7 @@ const router = createBrowserRouter([
           { path: "checkout", element: <CheckoutPage /> },
           { path: "order-success/:orderId", element: <OrderSuccessPage /> },
           { path: "my-orders", element: <MyOrdersPage /> },
+          { path: "favorites", element: <MyFavoritesPage /> },
           { path: "loyalty-points", element: <LoyaltyPointsPage /> },
           { path: "vouchers", element: <VouchersPage /> },
         ],

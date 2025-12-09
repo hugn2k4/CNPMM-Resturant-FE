@@ -142,6 +142,37 @@ const productService = {
     const response = await reviewApi.delete(id);
     return response.data;
   },
+
+  // Similar products
+  async getSimilarProducts(id: string, limit?: number) {
+    try {
+      const response = await productApi.getSimilar(id, limit);
+      return response.data?.data || [];
+    } catch (error) {
+      console.error("Error in getSimilarProducts:", error);
+      return [];
+    }
+  },
+
+  // Product view tracking
+  async logProductView(id: string, sessionId?: string) {
+    try {
+      await productApi.logView(id, sessionId);
+    } catch (error) {
+      console.error("Error in logProductView:", error);
+      // Don't throw, just log - view tracking is not critical
+    }
+  },
+
+  async getRecentViews(sessionId?: string, limit?: number) {
+    try {
+      const response = await productApi.getRecent(sessionId, limit);
+      return response.data?.data || { views: [], products: [] };
+    } catch (error) {
+      console.error("Error in getRecentViews:", error);
+      return { views: [], products: [] };
+    }
+  },
 };
 
 export default productService;
