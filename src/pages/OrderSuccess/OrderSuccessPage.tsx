@@ -28,11 +28,11 @@ export default function OrderSuccessPage() {
 
   useEffect(() => {
     // Fetch user reviews nếu order đã delivered và có user
-    if (order?.orderStatus === "delivered" && user?._id) {
+    if (order?.orderStatus === "delivered" && user?.id) {
       fetchUserReviews();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [order?.orderStatus, user?._id]);
+  }, [order?.orderStatus, user?.id]);
 
   const fetchOrderDetail = async () => {
     if (!orderId) return;
@@ -50,10 +50,10 @@ export default function OrderSuccessPage() {
   };
 
   const fetchUserReviews = async () => {
-    if (!user?._id) return;
+    if (!user?.id) return;
 
     try {
-      const response = await reviewApi.getByUser(user._id, { page: 1, limit: 100 });
+      const response = await reviewApi.getByUser(String(user.id), { page: 1, limit: 100 });
       const apiResponse = response.data as { success?: boolean; data?: { reviews?: Review[] }; message?: string };
       const reviews = apiResponse.data?.reviews || (apiResponse as { reviews?: Review[] })?.reviews || [];
       setUserReviews(reviews);
@@ -62,17 +62,29 @@ export default function OrderSuccessPage() {
     }
   };
 
-  const hasReviewedProduct = (productId: string | { _id: string }): boolean => {
-    if (typeof productId === "object") {
-      return userReviews.some((review) => review.productId === productId._id);
+  const hasReviewedProduct = (productId: string | { _id: string }, orderId?: string): boolean => {
+    const pid = typeof productId === "object" ? productId._id : productId;
+
+    // Nếu có orderId, kiểm tra xem đã đánh giá order này chưa
+    if (orderId) {
+      return userReviews.some((review) => review.productId === pid && review.orderId === orderId);
     }
-    return userReviews.some((review) => review.productId === productId);
+
+    // Nếu không có orderId, kiểm tra xem đã đánh giá sản phẩm này trong order hiện tại chưa
+    if (order?._id) {
+      return userReviews.some((review) => review.productId === pid && review.orderId === order._id);
+    }
+
+    // Fallback: kiểm tra xem đã đánh giá sản phẩm này chưa (không quan tâm order)
+    return userReviews.some((review) => review.productId === pid);
   };
 
   const handleReviewProduct = (productId: string | { _id: string }) => {
     const id = typeof productId === "object" ? productId._id : productId;
-    // Navigate to product page với hash để scroll đến phần reviews
-    navigate(`/products/${id}#reviews`);
+    // Navigate to product page với hash để scroll đến phần reviews, và truyền orderId nếu có
+    // Query params phải đặt trước hash
+    const url = order?._id ? `/products/${id}?orderId=${order._id}#reviews` : `/products/${id}#reviews`;
+    navigate(url);
   };
 
   if (loading) {
@@ -212,7 +224,7 @@ export default function OrderSuccessPage() {
                 const productImage = item.image || "/placeholder.jpg";
                 const productName = product?.name || item.name || "Sản phẩm";
                 const productId = product?._id || (typeof item.productId === "string" ? item.productId : "");
-                const isReviewed = productId ? hasReviewedProduct(productId) : false;
+                const isReviewed = productId && order?._id ? hasReviewedProduct(productId, order._id) : false;
 
                 return (
                   <div key={index} className="flex gap-4 p-3 bg-gray-50 rounded">

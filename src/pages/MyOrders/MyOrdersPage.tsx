@@ -71,16 +71,23 @@ export default function MyOrdersPage() {
     }
   };
 
-  const hasReviewedProduct = (productId: string | { _id: string }): boolean => {
-    if (typeof productId === "object") {
-      return userReviews.some((review) => review.productId === productId._id);
+  const hasReviewedProduct = (productId: string | { _id: string }, orderId?: string): boolean => {
+    const pid = typeof productId === "object" ? productId._id : productId;
+
+    // Nếu có orderId, kiểm tra xem đã đánh giá order này chưa
+    if (orderId) {
+      return userReviews.some((review) => review.productId === pid && review.orderId === orderId);
     }
-    return userReviews.some((review) => review.productId === productId);
+
+    // Fallback: kiểm tra xem đã đánh giá sản phẩm này chưa (không quan tâm order)
+    return userReviews.some((review) => review.productId === pid);
   };
 
-  const handleReviewProduct = (productId: string | { _id: string }) => {
+  const handleReviewProduct = (productId: string | { _id: string }, orderId?: string) => {
     const id = typeof productId === "object" ? productId._id : productId;
-    navigate(`/products/${id}#reviews`);
+    // Query params phải đặt trước hash
+    const url = orderId ? `/products/${id}?orderId=${orderId}#reviews` : `/products/${id}#reviews`;
+    navigate(url);
   };
 
   const handleCancelOrder = async (orderId: string) => {
@@ -231,7 +238,7 @@ export default function MyOrdersPage() {
                     const productImage = item.image || "/placeholder.jpg";
                     const productName = product?.name || item.name || "Sản phẩm";
                     const productId = product?._id || (typeof item.productId === "string" ? item.productId : "");
-                    const isReviewed = productId ? hasReviewedProduct(productId) : false;
+                    const isReviewed = productId && order._id ? hasReviewedProduct(productId, order._id) : false;
 
                     return (
                       <div key={index} className="flex gap-4">
@@ -257,7 +264,7 @@ export default function MyOrdersPage() {
                                   variant="outlined"
                                   size="small"
                                   startIcon={<Star />}
-                                  onClick={() => handleReviewProduct(productId)}
+                                  onClick={() => handleReviewProduct(productId, order._id)}
                                   className="text-orange-600 border-orange-600 hover:bg-orange-50 mt-1"
                                 >
                                   Đánh giá

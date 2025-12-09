@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination, Thumbs } from "swiper/modules";
 import type { Swiper as SwiperType } from "swiper";
@@ -20,9 +20,20 @@ import ReviewSection from "../../components/common/ReviewSection";
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { isLogin } = useGlobal();
   const { showSnackbar } = useSnackbar();
+
+  // Lấy orderId từ URL query params nếu có
+  const orderId = searchParams.get("orderId") || undefined;
+
+  // Debug: log orderId để kiểm tra
+  useEffect(() => {
+    if (orderId) {
+      console.log("OrderId from URL:", orderId);
+    }
+  }, [orderId]);
 
   const [product, setProduct] = useState<Product | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
@@ -453,7 +464,7 @@ export default function ProductDetailPage() {
         {product && (
           <div id="reviews-section" className="mt-8 bg-white rounded-lg shadow-lg overflow-hidden">
             <div className="p-6 lg:p-8">
-              <ReviewSection productId={product._id} />
+              <ReviewSection productId={product._id} orderId={orderId} />
             </div>
           </div>
         )}

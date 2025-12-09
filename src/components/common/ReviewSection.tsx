@@ -7,11 +7,19 @@ import Button from "./Button";
 
 interface ReviewSectionProps {
   productId: string;
+  orderId?: string; // Optional: nếu có orderId, sẽ đánh giá cho order cụ thể
 }
 
-export default function ReviewSection({ productId }: ReviewSectionProps) {
+export default function ReviewSection({ productId, orderId }: ReviewSectionProps) {
   const { isLogin } = useGlobal();
   const { showSnackbar } = useSnackbar();
+
+  // Debug: log orderId để kiểm tra
+  useEffect(() => {
+    if (orderId) {
+      console.log("ReviewSection received orderId:", orderId, "isLogin:", isLogin);
+    }
+  }, [orderId, isLogin]);
 
   const [reviews, setReviews] = useState<Review[]>([]);
   const [stats, setStats] = useState<RatingStats | null>(null);
@@ -92,6 +100,7 @@ export default function ReviewSection({ productId }: ReviewSectionProps) {
         productId,
         content: content.trim(),
         rate: rating,
+        ...(orderId && { orderId }), // Gửi orderId nếu có
       });
 
       // Backend returns: { success: true, message: '...', data: Review, points: {...} }
@@ -224,8 +233,8 @@ export default function ReviewSection({ productId }: ReviewSectionProps) {
         </div>
       )}
 
-      {/* Review Form (Only for logged in users) */}
-      {isLogin && (
+      {/* Review Form (Only when orderId is provided - from order detail page) */}
+      {orderId && isLogin && (
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <div className="mb-4">
             <h3 className="text-xl font-bold text-gray-900 mb-2">Viết đánh giá</h3>
@@ -241,9 +250,8 @@ export default function ReviewSection({ productId }: ReviewSectionProps) {
                 <div className="text-sm text-blue-800">
                   <p className="font-semibold mb-1">💝 Quà tặng đặc biệt!</p>
                   <p>
-                    Chỉ khách hàng đã mua sản phẩm thành công mới có thể đánh giá. Mỗi đánh giá sẽ nhận được{" "}
-                    <strong>100 điểm</strong> (tương đương <strong>1,000 VND</strong>) để sử dụng khi thanh toán đơn
-                    hàng tiếp theo!
+                    Mỗi đánh giá sẽ nhận được <strong>100 điểm</strong> (tương đương <strong>1,000 VND</strong>) để sử
+                    dụng khi thanh toán đơn hàng tiếp theo!
                   </p>
                 </div>
               </div>
@@ -291,10 +299,20 @@ export default function ReviewSection({ productId }: ReviewSectionProps) {
         </div>
       )}
 
+      {/* Message when no orderId - only show reviews */}
+      {!orderId && isLogin && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+          <p className="text-gray-700 text-sm">
+            Để đánh giá sản phẩm, vui lòng vào trang <strong>Đơn hàng của tôi</strong> và chọn "Đánh giá" cho sản phẩm
+            đã mua.
+          </p>
+        </div>
+      )}
+
       {/* Login Prompt */}
-      {!isLogin && (
+      {!orderId && !isLogin && (
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 text-center">
-          <p className="text-gray-700 mb-4">Bạn cần đăng nhập để viết đánh giá</p>
+          <p className="text-gray-700 mb-4">Bạn cần đăng nhập để xem đánh giá</p>
           <Button onClick={() => setShowLoginDialog(true)} className="bg-orange-500 text-white hover:bg-orange-600">
             Đăng nhập
           </Button>

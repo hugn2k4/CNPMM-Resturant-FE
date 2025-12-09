@@ -11,6 +11,7 @@ export interface Review {
     image?: string;
   };
   productId: string;
+  orderId?: string;
   images?: string[];
   isVerifiedPurchase: boolean;
   createdAt: string;
@@ -59,7 +60,7 @@ const reviewApi = {
   },
 
   // Tạo review mới
-  create: (data: { productId: string; content: string; rate: number; images?: string[] }) => {
+  create: (data: { productId: string; content: string; rate: number; orderId?: string; images?: string[] }) => {
     return axiosClient.post<Review>("/reviews", data);
   },
 
