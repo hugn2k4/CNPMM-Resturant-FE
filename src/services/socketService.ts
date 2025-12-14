@@ -10,6 +10,11 @@ class SocketService {
       return;
     }
 
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+    }
+
     const socketUrl = API_BASE_URL.replace("/api", "");
 
     this.socket = io(socketUrl, {
@@ -17,21 +22,16 @@ class SocketService {
         token,
       },
       transports: ["websocket", "polling"],
-    });
-
-    this.socket.on("connect", () => {
-      console.log("[Socket] Connected:", this.socket?.id);
-    });
-
-    this.socket.on("disconnect", () => {
-      console.log("[Socket] Disconnected");
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+      withCredentials: true,
     });
 
     this.socket.on("connect_error", (error) => {
-      console.error("[Socket] Connection error:", error);
+      console.error("[Socket] Connection error:", error.message);
     });
 
-    // Lắng nghe notification
     this.socket.on("notification", (notification) => {
       this.emitToListeners("notification", notification);
     });
@@ -79,12 +79,10 @@ class SocketService {
     return this.socket?.connected || false;
   }
 
-  // Get socket instance (for emitting events)
   get socketInstance(): Socket | null {
     return this.socket;
   }
 
-  // Emit event to server
   emit(event: string, data: unknown) {
     if (this.socket?.connected) {
       this.socket.emit(event, data);

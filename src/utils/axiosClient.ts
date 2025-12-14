@@ -8,30 +8,12 @@ const axiosClient = axios.create({
   withCredentials: true,
 });
 
-// Generate unique request ID
-let requestId = 0;
-function generateRequestId(): number {
-  return ++requestId;
-}
-
-// ----- REQUEST INTERCEPTOR -----
 axiosClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Generate and attach request ID
-    const reqId = generateRequestId();
-    config.headers["X-Request-ID"] = reqId.toString();
-
     const token = localStorage.getItem("accessToken");
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-
-    // Log request with ID
-    console.log(`🔹 [${reqId}] Request:`, {
-      url: config.url,
-      method: config.method?.toUpperCase(),
-      data: config.data,
-    });
 
     return config;
   },
@@ -47,24 +29,11 @@ let subscribers: ((token: string) => void)[] = [];
 // ----- RESPONSE INTERCEPTOR -----
 axiosClient.interceptors.response.use(
   (response: AxiosResponse) => {
-    // Get request ID from headers
-    const reqId = response.config.headers["X-Request-ID"] || "?";
-
-    // Log response with matching ID
-    console.log(`✅ [${reqId}] Response:`, {
-      url: response.config.url,
-      status: response.status,
-      data: response.data,
-    });
-
     return response;
   },
   async (error) => {
     const originalRequest = error.config;
-    const reqId = originalRequest?.headers?.["X-Request-ID"] || "?";
 
-    // ----- Handle 401 + Refresh token -----
-    // Skip refresh for login/register endpoints
     const skipRefreshUrls = ["/auth/login", "/auth/register", "/auth/confirm"];
     const shouldSkipRefresh = skipRefreshUrls.some((url) => originalRequest?.url?.includes(url));
 
@@ -82,9 +51,7 @@ axiosClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        console.log(`🔄 [${reqId}] Refreshing token...`);
-        // Use plain axios (no interceptors) to avoid re-entering this interceptor
-        const res = await axios.post(`${API_BASE_URL}/auth/refresh-token`, null, {
+        const res = await axios.post(`${API_BASE_URL}/auth/refresh`, null, {
           withCredentials: true,
           headers: DEFAULT_HEADERS,
         });
@@ -97,7 +64,6 @@ axiosClient.interceptors.response.use(
             /* ignore storage errors */
           }
 
-          // notify queued requests
           subscribers.forEach((cb) => cb(newAccessToken));
           subscribers = [];
           isRefreshing = false;
@@ -115,7 +81,7 @@ axiosClient.interceptors.response.use(
         } catch {
           /* ignore */
         }
-        console.error(`❌ [${reqId}] Refresh token failed`, refreshError);
+        console.error("Refresh token failed", refreshError);
 
         // Notify app to perform a global logout (update UI state)
         try {
@@ -128,8 +94,7 @@ axiosClient.interceptors.response.use(
       }
     }
 
-    // Log error with request ID
-    console.error(`❌ [${reqId}] ${error.response?.status || "ERR"} ${error.config?.url || "Unknown"}`);
+    console.error(`Request failed: ${error.response?.status || "ERR"} ${error.config?.url || "Unknown"}`);
 
     return Promise.reject(error);
   }

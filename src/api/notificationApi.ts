@@ -42,12 +42,12 @@ const notificationApi = {
   },
 
   markAsRead: async (notificationId: string) => {
-    const response = await axiosClient.put(`/notifications/${notificationId}/read`);
+    const response = await axiosClient.put(`/notifications/${notificationId}/read`, {});
     return response.data;
   },
 
   markAllAsRead: async () => {
-    const response = await axiosClient.put("/notifications/read-all");
+    const response = await axiosClient.put("/notifications/read-all", {});
     return response.data;
   },
 

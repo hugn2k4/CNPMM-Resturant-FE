@@ -2,6 +2,7 @@ import { createContext, useEffect, useState, useCallback, type ReactNode } from 
 import { useGlobal } from "../hooks/useGlobal";
 import socketService from "../services/socketService";
 import notificationApi, { type Notification } from "../api/notificationApi";
+import authApi from "../api/authApi";
 
 interface NotificationContextType {
   notifications: Notification[];
@@ -52,24 +53,60 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
   // Kết nối socket khi đăng nhập
   useEffect(() => {
-    if (isLogin && accessToken) {
-      socketService.connect(accessToken);
-
-      // Lắng nghe notification mới
+    if (isLogin) {
       const handleNewNotification = (data: unknown) => {
         const notification = data as Notification;
-        // Kiểm tra xem notification đã tồn tại chưa (tránh duplicate)
+
+        if (!notification || !notification._id) {
+          return;
+        }
+
         setNotifications((prev) => {
           const exists = prev.some((n) => n._id === notification._id);
-          if (exists) return prev;
+          if (exists) {
+            return prev;
+          }
           return [notification, ...prev];
         });
         setUnreadCount((prev) => prev + 1);
-        // Refresh notifications để đảm bảo sync với server
-        refreshNotifications();
+
+        setTimeout(() => {
+          refreshNotifications();
+        }, 500);
       };
 
       socketService.on("notification", handleNewNotification);
+
+      const connectSocket = async () => {
+        let tokenToUse = accessToken || localStorage.getItem("accessToken");
+
+        if (!tokenToUse) {
+          try {
+            const response = await authApi.refreshToken();
+            tokenToUse = response.data?.accessToken || null;
+
+            if (tokenToUse) {
+              try {
+                localStorage.setItem("accessToken", tokenToUse);
+              } catch (e) {
+                console.error("Failed to save token to localStorage:", e);
+              }
+            }
+          } catch (error: unknown) {
+            const axiosError = error as { response?: { status?: number } };
+            if (axiosError.response?.status !== 400) {
+              console.error("Failed to fetch token:", error);
+            }
+            return;
+          }
+        }
+
+        if (tokenToUse) {
+          socketService.connect(tokenToUse);
+        }
+      };
+
+      connectSocket();
 
       return () => {
         socketService.off("notification", handleNewNotification);
@@ -81,7 +118,6 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isLogin, accessToken, refreshNotifications]);
 
-  // Load notifications khi đăng nhập
   useEffect(() => {
     if (isLogin) {
       refreshNotifications();
@@ -141,5 +177,4 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// Export context for useNotifications hook (moved to hooks/useNotifications.ts)
 export { NotificationContext };

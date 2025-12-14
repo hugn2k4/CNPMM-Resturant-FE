@@ -92,17 +92,17 @@ export default function NotificationBell() {
                       </Box>
                     }
                     secondary={
-                      <>
-                        <Typography variant="body2" color="textSecondary">
+                      <Box component="span" sx={{ display: "block" }}>
+                        <Box component="span" sx={{ display: "block", mb: 0.5 }}>
                           {notification.message}
-                        </Typography>
-                        <Typography variant="caption" color="textSecondary">
+                        </Box>
+                        <Typography variant="caption" color="textSecondary" component="span">
                           {formatDistanceToNow(new Date(notification.createdAt), {
                             addSuffix: true,
                             locale: vi,
                           })}
                         </Typography>
-                      </>
+                      </Box>
                     }
                   />
                   <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
