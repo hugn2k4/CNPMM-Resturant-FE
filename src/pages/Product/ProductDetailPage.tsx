@@ -528,8 +528,20 @@ export default function ProductDetailPage() {
           </div>
         )}
 
-        {/* Related Products */}
-        {relatedProducts.length > 0 && (
+        {/* Similar Products */}
+        {similarProducts.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Sản phẩm tương tự</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {similarProducts.slice(0, 8).map((similarProduct) => (
+                <ProductCard key={similarProduct._id} product={similarProduct} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Recently Viewed Products */}
+        {recentlyViewed.length > 0 && (
           <div className="mt-12">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Đã xem gần đây</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
