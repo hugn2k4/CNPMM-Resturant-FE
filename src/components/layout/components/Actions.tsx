@@ -24,6 +24,7 @@ import { useNavigate } from "react-router-dom";
 import { useGlobal } from "../../../hooks/useGlobal";
 import { useSnackbar } from "../../../hooks/useSnackbar";
 import LoginRequiredDialog from "../../common/LoginRequiredDialog";
+import NotificationBell from "../../common/NotificationBell";
 import cartService from "../../../services/cartService";
 
 function Actions() {
@@ -125,6 +126,8 @@ function Actions() {
           <SearchIcon sx={{ fontSize: { xs: 20, md: 24 } }} />
         </IconButton>
       </Tooltip>
+
+      {isLogin && <NotificationBell />}
 
       {isLogin ? (
         <Tooltip title={user?.fullName || "Account"} arrow>

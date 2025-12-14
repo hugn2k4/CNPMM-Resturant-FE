@@ -21,7 +21,7 @@ const authApi = {
   resendOTp: (email: string): Promise<ApiResponse> =>
     axiosClient.post(`/auth/resend-otp`, { email }).then((response) => response.data),
 
-  refreshToken: (): Promise<LoginResponse> => axiosClient.post("/auth/refresh-token").then((response) => response.data),
+  refreshToken: (): Promise<LoginResponse> => axiosClient.post("/auth/refresh").then((response) => response.data),
 
   logout: (): Promise<ApiResponse> => axiosClient.post("/api/logout").then((response) => response.data),
 
