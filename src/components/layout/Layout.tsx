@@ -1,6 +1,8 @@
 import { Box } from "@mui/material";
-import { useLocation, matchPath } from "react-router-dom";
+import { matchPath, useLocation } from "react-router-dom";
 import ROUTES_META from "../../config/routesMeta";
+import { useGlobal } from "../../hooks/useGlobal";
+import ChatBox from "../Chat/ChatBox";
 import Footer from "./Footer";
 import Header from "./Header";
 import PageHeader from "./PageHeader";
@@ -11,6 +13,7 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { pathname } = useLocation();
+  const { user } = useGlobal();
 
   const matchedKey = Object.keys(ROUTES_META).find((route) => matchPath({ path: route, end: true }, pathname));
 
@@ -31,6 +34,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>{children}</Box>
 
       <Footer />
+
+      {/* Show ChatBox only for authenticated non-admin users */}
+      {user && user.role !== "admin" && <ChatBox />}
     </Box>
   );
 };

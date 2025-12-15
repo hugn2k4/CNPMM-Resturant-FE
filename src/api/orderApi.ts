@@ -22,6 +22,10 @@ const orderApi = {
   // Xác nhận đã nhận hàng
   confirmReceived: (orderId: string): Promise<ApiResponse<Order>> =>
     axiosClient.patch(`/orders/${orderId}/confirm-received`).then((response) => response.data),
+
+  // Admin: Lấy tất cả đơn hàng
+  getAllOrders: (params?: { page?: number; limit?: number; status?: string }): Promise<ApiResponse<Order[]>> =>
+    axiosClient.get("/orders", { params }).then((response) => response.data),
 };
 
 export default orderApi;

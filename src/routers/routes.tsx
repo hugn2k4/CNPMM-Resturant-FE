@@ -1,6 +1,11 @@
 import { createBrowserRouter } from "react-router-dom";
 import App from "../App";
+import AdminLayout from "../components/layout/AdminLayout";
 import Dev from "../Dev";
+import AdminDashboard from "../pages/Admin";
+import AdminOrders from "../pages/Admin/AdminOrders";
+import AdminCustomers from "../pages/Admin/AdminProducts";
+import AdminChat from "../pages/AdminChat";
 import RequestForgotPassword from "../pages/Auth/components/RequestForgotPassword";
 import SetNewPassword from "../pages/Auth/components/SetNewPassword";
 import ForgotPasswordPage from "../pages/Auth/ForgotPasswordPage";
@@ -8,9 +13,9 @@ import SignInPage from "../pages/Auth/SignInPage";
 import SignUpPage from "../pages/Auth/SignUpPage";
 import CartPage from "../pages/Cart/CartPage";
 import CheckoutPage from "../pages/Checkout/CheckoutPage";
+import MyFavoritesPage from "../pages/Favorites/MyFavoritesPage";
 import HomePage from "../pages/Home/HomePage";
 import LoyaltyPointsPage from "../pages/LoyaltyPoints";
-import MyFavoritesPage from "../pages/Favorites/MyFavoritesPage";
 import MyOrdersPage from "../pages/MyOrders/MyOrdersPage";
 import NotFoundPage from "../pages/NotFound/NotFoundPage";
 import OrderSuccessPage from "../pages/OrderSuccess/OrderSuccessPage";
@@ -18,6 +23,7 @@ import ProductDetailPage from "../pages/Product/ProductDetailPage";
 import ProductListPage from "../pages/Product/ProductListPage";
 import ProfilePage from "../pages/Profile/ProfilePage";
 import VouchersPage from "../pages/Vouchers";
+import AdminRoute from "./AdminRoute";
 import PrivateRoute from "./PrivateRoute";
 import PublicRoute from "./PublicRoute";
 
@@ -59,6 +65,22 @@ const router = createBrowserRouter([
         ],
       },
       { path: "dev", element: <Dev /> },
+    ],
+  },
+  {
+    path: "/admin",
+    element: <AdminRoute />,
+    children: [
+      {
+        element: <AdminLayout />,
+        children: [
+          { index: true, element: <AdminDashboard /> },
+          { path: "chat", element: <AdminChat /> },
+          { path: "orders", element: <AdminOrders /> },
+          { path: "customers", element: <AdminCustomers /> },
+          { path: "products", element: <AdminCustomers /> },
+        ],
+      },
     ],
   },
 ]);

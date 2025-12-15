@@ -15,6 +15,20 @@ axiosClient.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
+    // Add timestamp for duration calculation
+    if (config.headers) {
+      config.headers["request-startTime"] = Date.now().toString();
+    }
+
+    // Log request
+    console.log(`📤 ${config.method?.toUpperCase()} ${config.url}`, {
+      params: config.params,
+      data: config.data,
+      headers: {
+        Authorization: config.headers?.Authorization ? "✓ Bearer token" : "✗ No token",
+      },
+    });
+
     return config;
   },
   (error) => {
@@ -29,6 +43,13 @@ let subscribers: ((token: string) => void)[] = [];
 // ----- RESPONSE INTERCEPTOR -----
 axiosClient.interceptors.response.use(
   (response: AxiosResponse) => {
+    // Log successful response
+    console.log(`✅ ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`, {
+      data: response.data,
+      duration: response.config.headers?.["request-startTime"]
+        ? `${Date.now() - Number(response.config.headers["request-startTime"])}ms`
+        : "N/A",
+    });
     return response;
   },
   async (error) => {
@@ -94,7 +115,17 @@ axiosClient.interceptors.response.use(
       }
     }
 
-    console.error(`Request failed: ${error.response?.status || "ERR"} ${error.config?.url || "Unknown"}`);
+    // Log error response
+    const status = error.response?.status || "ERR";
+    const url = error.config?.url || "Unknown";
+    const method = error.config?.method?.toUpperCase() || "GET";
+
+    console.error(`❌ ${status} ${method} ${url}`, {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+    });
 
     return Promise.reject(error);
   }
