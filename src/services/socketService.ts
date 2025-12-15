@@ -35,6 +35,29 @@ class SocketService {
     this.socket.on("notification", (notification) => {
       this.emitToListeners("notification", notification);
     });
+
+    // Chat events
+    this.socket.on("chat:new_message", (data) => {
+      this.emitToListeners("chat:new_message", data);
+    });
+
+    this.socket.on("chat:message_sent", (data) => {
+      this.emitToListeners("chat:message_sent", data);
+    });
+
+    // Admin specific events
+    this.socket.on("chat:new_user_message", (data) => {
+      this.emitToListeners("chat:new_user_message", data);
+    });
+
+    this.socket.on("chat:admin_typing", (data) => {
+      this.emitToListeners("chat:admin_typing", data);
+    });
+
+    this.socket.on("chat:error", (data) => {
+      this.emitToListeners("chat:error", data);
+      console.error("[Socket] Chat error:", data);
+    });
   }
 
   disconnect() {

@@ -20,6 +20,10 @@ const userApi = {
 
   updateProfile: (data: UpdateProfileRequest): Promise<UserProfileResponse> =>
     axiosClient.put("/users/profile", data).then((response) => response.data),
+
+  // Admin: Lấy tất cả user
+  getAllUsers: (): Promise<{ success: boolean; data: User[] }> =>
+    axiosClient.get("/users").then((response) => response.data),
 };
 
 export default userApi;
