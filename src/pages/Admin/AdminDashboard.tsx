@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import chatApi from "../../api/chatApi";
 import orderApi from "../../api/orderApi";
 import userApi from "../../api/userApi";
+import summaryApi from "../../api/summaryApi";
 import socketService from "../../services/socketService";
 
 const AdminDashboard = () => {
@@ -15,8 +16,27 @@ const AdminDashboard = () => {
     todayRevenue: 0,
   });
 
+  const [revenueSeries, setRevenueSeries] = useState<Array<{ _id: string; totalRevenue: number }>>([]);
+  type DeliveredOrder = {
+    _id: string;
+    orderNumber?: string;
+    userId?: { fullName?: string; email?: string } | null;
+    deliveredAt?: string | null;
+    finalAmount?: number;
+  };
+
+  type TopProduct = {
+    productId?: string | number | null;
+    product?: { name?: string } | null;
+    totalQuantity?: number;
+  };
+
+  const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
+  const [recentDelivered, setRecentDelivered] = useState<DeliveredOrder[]>([]);
+
   useEffect(() => {
     loadStats();
+    loadSummary();
 
     // Connect socket for realtime updates
     const token = localStorage.getItem("accessToken");
@@ -47,10 +67,27 @@ const AdminDashboard = () => {
     }
   };
 
+  const loadSummary = async () => {
+    try {
+      const [revRes, topRes, deliveredRes] = await Promise.all([
+        summaryApi.getRevenue({ interval: "day" }),
+        summaryApi.getTopProducts({ limit: 10 }),
+        summaryApi.getDeliveredOrders({ page: 1, limit: 5 }),
+      ]);
+
+      setRevenueSeries(revRes.data || []);
+      setTopProducts(topRes.data || []);
+      setRecentDelivered(deliveredRes.data?.orders || []);
+    } catch (error) {
+      console.error("Failed to load summary:", error);
+    }
+  };
+
   const loadOrders = async () => {
     try {
       const response = await orderApi.getAllOrders();
-      const orders = response.data || [];
+      // Backend returns a paginated object: { orders, total, page, ... }
+      const orders = response.data?.orders || response.data || [];
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
@@ -60,7 +97,11 @@ const AdminDashboard = () => {
         return orderDate.getTime() === today.getTime();
       });
 
-      const todayRevenue = todayOrders.reduce((sum: number, order: { total: number }) => sum + order.total, 0);
+      const todayRevenue = todayOrders.reduce(
+        (sum: number, order: { finalAmount?: number; totalAmount?: number }) =>
+          sum + (order.finalAmount ?? order.totalAmount ?? 0),
+        0
+      );
 
       setStats((prev) => ({
         ...prev,
@@ -184,9 +225,80 @@ const AdminDashboard = () => {
             <Typography variant="h6" gutterBottom>
               Hoạt động gần đây
             </Typography>
-            <Typography color="text.secondary">Chức năng này đang được phát triển...</Typography>
+            <Typography color="text.secondary">Đơn giao gần nhất</Typography>
+
+            {recentDelivered.length === 0 ? (
+              <Typography color="text.secondary" sx={{ mt: 2 }}>
+                Không có đơn hàng đã giao gần đây.
+              </Typography>
+            ) : (
+              <Box sx={{ mt: 2 }}>
+                {recentDelivered.map((o: DeliveredOrder) => (
+                  <Box key={o._id} sx={{ mb: 1, p: 1, borderBottom: "1px solid #eee" }}>
+                    <Typography sx={{ fontWeight: 600 }}>{o.orderNumber}</Typography>
+                    <Typography color="text.secondary" sx={{ fontSize: 13 }}>
+                      {o.userId?.fullName || o.userId?.email} — {new Date(o.deliveredAt || "").toLocaleString()} —{" "}
+                      {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
+                        o.finalAmount || 0
+                      )}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            )}
           </CardContent>
         </Card>
+      </Box>
+
+      <Box sx={{ mt: 4 }}>
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6">Doanh thu (mỗi ngày)</Typography>
+                {revenueSeries.length === 0 ? (
+                  <Typography color="text.secondary">Không có dữ liệu</Typography>
+                ) : (
+                  <Box sx={{ mt: 2 }}>
+                    {revenueSeries.map((r) => (
+                      <Box key={r._id} sx={{ display: "flex", justifyContent: "space-between", py: 0.5 }}>
+                        <Typography>{r._id}</Typography>
+                        <Typography sx={{ fontWeight: 700 }}>
+                          {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
+                            r.totalRevenue || 0
+                          )}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6">Top 10 sản phẩm</Typography>
+                {topProducts.length === 0 ? (
+                  <Typography color="text.secondary">Không có dữ liệu</Typography>
+                ) : (
+                  <Box sx={{ mt: 2 }}>
+                    {topProducts.map((p: TopProduct, idx: number) => (
+                      <Box
+                        key={String(p.productId || idx)}
+                        sx={{ display: "flex", justifyContent: "space-between", py: 0.5 }}
+                      >
+                        <Typography>{p.product?.name || "-"}</Typography>
+                        <Typography sx={{ fontWeight: 700 }}>{p.totalQuantity || 0} pcs</Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
       </Box>
     </Box>
   );
