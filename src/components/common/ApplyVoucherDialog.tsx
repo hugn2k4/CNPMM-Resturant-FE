@@ -108,8 +108,17 @@ const ApplyVoucherDialog: React.FC<ApplyVoucherDialogProps> = ({ open, onClose, 
   };
 
   const currentVouchers = activeTab === "available" ? availableVouchers : savedVouchers;
+
+  const isVoucherActiveNow = (v: IVoucher) => {
+    const now = new Date();
+    const isExpired = v.endDate ? new Date(v.endDate) < now : false;
+    const isNotStarted = v.startDate ? new Date(v.startDate) > now : false;
+    const isMaxUsage = v.maxUsage && v.usageCount >= v.maxUsage;
+    return !isExpired && !isNotStarted && !isMaxUsage && v.canUse;
+  };
+
   const eligibleVouchers = Array.isArray(currentVouchers)
-    ? currentVouchers.filter((v) => v.canUse && orderData.subtotal >= v.minOrderAmount)
+    ? currentVouchers.filter((v) => isVoucherActiveNow(v) && orderData.subtotal >= (v.minOrderAmount || 0))
     : [];
 
   return (
@@ -173,6 +182,7 @@ const ApplyVoucherDialog: React.FC<ApplyVoucherDialogProps> = ({ open, onClose, 
 
         {/* Voucher list */}
         <div className="space-y-3 max-h-96 overflow-y-auto">
+          {/* Voucher list */}
           {loading ? (
             <div className="text-center py-8 text-gray-500">Đang tải...</div>
           ) : eligibleVouchers.length > 0 ? (

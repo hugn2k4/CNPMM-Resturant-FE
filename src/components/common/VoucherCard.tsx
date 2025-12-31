@@ -10,6 +10,8 @@ interface VoucherCardProps {
   onDelete?: (voucherId: string) => void;
   showActions?: boolean;
   isAdmin?: boolean;
+  disabledApply?: boolean;
+  disabledReason?: string;
 }
 
 const VoucherCard: React.FC<VoucherCardProps> = ({
@@ -19,6 +21,8 @@ const VoucherCard: React.FC<VoucherCardProps> = ({
   onDelete,
   showActions = true,
   isAdmin = false,
+  disabledApply,
+  disabledReason,
 }) => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("vi-VN", {
@@ -43,9 +47,24 @@ const VoucherCard: React.FC<VoucherCardProps> = ({
     }
   };
 
-  const isExpired = new Date(voucher.endDate) < new Date();
-  const isNotStarted = new Date(voucher.startDate) > new Date();
-  const isMaxUsage = voucher.maxUsage && voucher.usageCount >= voucher.maxUsage;
+  const now = new Date();
+  const isExpired = voucher.endDate ? new Date(voucher.endDate) < now : false;
+  const isNotStarted = voucher.startDate ? new Date(voucher.startDate) > now : false;
+  const isMaxUsage = voucher.maxUsage ? voucher.usageCount >= voucher.maxUsage : false;
+
+  const computedDisabled =
+    disabledApply !== undefined ? disabledApply : isExpired || isNotStarted || isMaxUsage || !voucher.canUse;
+  const computedDisabledReason =
+    disabledReason ||
+    (isExpired
+      ? "Hết hạn"
+      : isNotStarted
+        ? "Chưa bắt đầu"
+        : isMaxUsage
+          ? "Hết lượt"
+          : !voucher.canUse
+            ? "Đã dùng hết"
+            : undefined);
 
   return (
     <div
@@ -104,8 +123,13 @@ const VoucherCard: React.FC<VoucherCardProps> = ({
           {/* Actions */}
           {showActions && (
             <div className="flex gap-2">
-              {!isAdmin && onApply && voucher.canUse && !isExpired && !isNotStarted && (
-                <Button onClick={() => onApply(voucher)} variant="primary" size="sm" className="flex-1">
+              {!isAdmin && onApply && (
+                <Button
+                  onClick={() => onApply(voucher)}
+                  colorScheme="orange"
+                  className="flex-1"
+                  disabled={!!computedDisabled}
+                >
                   Áp dụng
                 </Button>
               )}
@@ -113,8 +137,7 @@ const VoucherCard: React.FC<VoucherCardProps> = ({
               {!isAdmin && onSave && (
                 <Button
                   onClick={() => onSave(voucher._id)}
-                  variant={voucher.isSaved ? "secondary" : "outline"}
-                  size="sm"
+                  colorScheme={voucher.isSaved ? "lightGreen" : "grey"}
                   className="flex-1"
                 >
                   {voucher.isSaved ? "Bỏ lưu" : "Lưu"}
@@ -122,11 +145,14 @@ const VoucherCard: React.FC<VoucherCardProps> = ({
               )}
 
               {isAdmin && onDelete && (
-                <Button onClick={() => onDelete(voucher._id)} variant="danger" size="sm" className="flex-1">
+                <Button onClick={() => onDelete(voucher._id)} colorScheme="grey" className="flex-1">
                   Xóa
                 </Button>
               )}
             </div>
+          )}
+          {computedDisabled && computedDisabledReason && (
+            <div className="mt-2 text-xs text-gray-500">{computedDisabledReason}</div>
           )}
         </div>
       </div>
