@@ -51,13 +51,8 @@ export default function SignInPage() {
         showSnackbar("Login successful!", "success", 3000);
         setGlobal({ isLogin: true, user: res.data?.user || null, accessToken: res.data?.accessToken || null });
 
-        // Check if user is admin and redirect to admin dashboard
-        if (res.data?.user?.role === "admin") {
-          navigate("/admin/chat", { replace: true });
-        } else {
-          // Redirect to the page user was trying to access, or home
-          navigate(from, { replace: true });
-        }
+        // Redirect to the page user was trying to access, or home
+        navigate(from, { replace: true });
       } else {
         showSnackbar(res.message || "Login failed. Please try again.", "error", 4000);
       }

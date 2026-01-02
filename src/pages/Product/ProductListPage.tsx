@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
-import type { Product } from "../../types/models/product";
-import ProductCard from "../../components/common/ProductCard";
-import PageHeader from "../../components/layout/PageHeader";
-import productService from "../../services/productService";
+import { useEffect, useState } from "react";
 import type { Category } from "../../api/categoryApi";
+import ProductCard from "../../components/common/ProductCard";
+import productService from "../../services/productService";
+import type { Product } from "../../types/models/product";
 
 export default function ProductListPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -134,8 +133,6 @@ export default function ProductListPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <PageHeader title="Thực đơn" />
-
       <div className="container mx-auto px-4 py-8">
         {/* Search and Filter Bar */}
         <div className="bg-white rounded-lg shadow-md p-4 mb-6">

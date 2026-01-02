@@ -1,11 +1,10 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { Product } from "../../types/models/product";
 import ProductCard from "../../components/common/ProductCard";
-import PageHeader from "../../components/layout/PageHeader";
-import wishlistService from "../../services/wishlistService";
-import { useSnackbar } from "../../hooks/useSnackbar";
 import { useGlobal } from "../../hooks/useGlobal";
+import { useSnackbar } from "../../hooks/useSnackbar";
+import wishlistService from "../../services/wishlistService";
+import type { Product } from "../../types/models/product";
 
 export default function MyFavoritesPage() {
   const { isLogin } = useGlobal();
@@ -62,8 +61,6 @@ export default function MyFavoritesPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
-        <PageHeader title="Sản phẩm yêu thích" />
-
         {favorites.length === 0 ? (
           <div className="bg-white rounded-lg shadow-md p-12 text-center">
             <svg className="w-24 h-24 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
