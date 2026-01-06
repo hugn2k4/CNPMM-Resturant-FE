@@ -5,13 +5,13 @@ interface RouteMeta {
 }
 
 const ROUTES_META: Record<string, RouteMeta> = {
-  "/menu": {
+  "/products": {
     title: "Our Menu",
     breadcrumb: [{ label: "Home", path: "/" }, { label: "Menu " }],
   },
-  "/about": {
-    title: "About Us",
-    breadcrumb: [{ label: "Home", path: "/" }, { label: "About" }],
+  "/my-orders": {
+    title: "My Orders",
+    breadcrumb: [{ label: "Home", path: "/" }, { label: "My orders" }],
   },
   "/cart": {
     title: "Shoping Cart",
@@ -21,9 +21,9 @@ const ROUTES_META: Record<string, RouteMeta> = {
     title: "Checkout",
     breadcrumb: [{ label: "Home", path: "/" }, { label: "Cart", path: "/cart" }, { label: "Checkout" }],
   },
-  "/shop": {
-    title: "Our Shop",
-    breadcrumb: [{ label: "Home", path: "/" }, { label: "Shop" }],
+  "/favorites": {
+    title: "Favorites",
+    breadcrumb: [{ label: "Home", path: "/" }, { label: "Favourites" }],
   },
   "/chef": {
     title: "Our Chef",
@@ -54,7 +54,6 @@ const ROUTES_META: Record<string, RouteMeta> = {
       { label: "Set New Password" },
     ],
   },
-
 };
 
 export default ROUTES_META;

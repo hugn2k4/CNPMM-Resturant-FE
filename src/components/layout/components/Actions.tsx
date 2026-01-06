@@ -1,23 +1,60 @@
 import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
+import FavoriteIcon from "@mui/icons-material/Favorite";
 import LoginIcon from "@mui/icons-material/Login";
 import LogoutIcon from "@mui/icons-material/Logout";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import SearchIcon from "@mui/icons-material/Search";
 import ShoppingBagOutlinedIcon from "@mui/icons-material/ShoppingBagOutlined";
-import { Box, Divider, IconButton, ListItemIcon, ListItemText, Menu, MenuItem, Tooltip } from "@mui/material";
-import { useState } from "react";
+import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
+import {
+  Avatar,
+  Box,
+  Divider,
+  IconButton,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGlobal } from "../../../hooks/useGlobal";
 import { useSnackbar } from "../../../hooks/useSnackbar";
 import LoginRequiredDialog from "../../common/LoginRequiredDialog";
+import NotificationBell from "../../common/NotificationBell";
+import cartService from "../../../services/cartService";
 
 function Actions() {
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
-  const { isLogin, logout } = useGlobal();
+  const [cartItemCount, setCartItemCount] = useState(0);
+  const { isLogin, user, logout } = useGlobal();
   const { showSnackbar } = useSnackbar();
+
+  // Fetch cart item count when user is logged in
+  useEffect(() => {
+    if (isLogin) {
+      const fetchCartCount = async () => {
+        try {
+          const count = await cartService.getCartItemCount();
+          setCartItemCount(count);
+        } catch (error) {
+          console.error("Error fetching cart count:", error);
+        }
+      };
+      fetchCartCount();
+
+      // Refresh cart count every 30 seconds
+      const interval = setInterval(fetchCartCount, 30000);
+      return () => clearInterval(interval);
+    } else {
+      setCartItemCount(0);
+    }
+  }, [isLogin]);
 
   const handleAccountClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -38,7 +75,17 @@ function Actions() {
   };
 
   const handleProfile = () => {
-    navigate("/account/dashboard");
+    navigate("/profile");
+    handleMenuClose();
+  };
+
+  const handleMyOrders = () => {
+    navigate("/my-orders");
+    handleMenuClose();
+  };
+
+  const handleFavorites = () => {
+    navigate("/favorites");
     handleMenuClose();
   };
 
@@ -80,11 +127,56 @@ function Actions() {
         </IconButton>
       </Tooltip>
 
-      <Tooltip title="Account" arrow>
-        <IconButton aria-label="Account" onClick={handleAccountClick} sx={iconButtonSx}>
-          <PersonOutlineOutlinedIcon sx={{ fontSize: { xs: 20, md: 24 } }} />
-        </IconButton>
-      </Tooltip>
+      {isLogin && <NotificationBell />}
+
+      {isLogin ? (
+        <Tooltip title={user?.fullName || "Account"} arrow>
+          <Box
+            onClick={handleAccountClick}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              cursor: "pointer",
+              px: 1,
+              py: 0.5,
+              borderRadius: 1,
+              transition: "all 0.2s ease",
+              "&:hover": {
+                bgcolor: "rgba(255, 255, 255, 0.1)",
+              },
+            }}
+          >
+            <Avatar
+              src={user?.image || user?.avatar}
+              alt={user?.fullName || "User"}
+              sx={{
+                width: { xs: 32, md: 36 },
+                height: { xs: 32, md: 36 },
+                bgcolor: "var(--color-primary)",
+              }}
+            >
+              {user?.fullName?.charAt(0)?.toUpperCase() || "U"}
+            </Avatar>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "white",
+                display: { xs: "none", sm: "block" },
+                fontWeight: 500,
+              }}
+            >
+              {user?.fullName || "User"}
+            </Typography>
+          </Box>
+        </Tooltip>
+      ) : (
+        <Tooltip title="Account" arrow>
+          <IconButton aria-label="Account" onClick={handleAccountClick} sx={iconButtonSx}>
+            <PersonOutlineOutlinedIcon sx={{ fontSize: { xs: 20, md: 24 } }} />
+          </IconButton>
+        </Tooltip>
+      )}
 
       {/* Account Menu */}
       <Menu
@@ -116,6 +208,18 @@ function Actions() {
                 </ListItemIcon>
                 <ListItemText>Profile</ListItemText>
               </MenuItem>,
+              <MenuItem key="orders" onClick={handleMyOrders}>
+                <ListItemIcon>
+                  <ShoppingCartOutlinedIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>My Orders</ListItemText>
+              </MenuItem>,
+              <MenuItem key="favorites" onClick={handleFavorites}>
+                <ListItemIcon>
+                  <FavoriteIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>My Favorites</ListItemText>
+              </MenuItem>,
               <Divider key="divider" />,
               <MenuItem key="logout" onClick={handleLogout}>
                 <ListItemIcon>
@@ -141,9 +245,32 @@ function Actions() {
       </Menu>
 
       <Tooltip title="Cart" arrow>
-        <IconButton aria-label="View cart" sx={iconButtonSx} onClick={handleCartClick}>
-          <ShoppingBagOutlinedIcon sx={{ fontSize: { xs: 20, md: 24 } }} />
-        </IconButton>
+        <Box sx={{ position: "relative" }}>
+          <IconButton aria-label="View cart" sx={iconButtonSx} onClick={handleCartClick}>
+            <ShoppingBagOutlinedIcon sx={{ fontSize: { xs: 20, md: 24 } }} />
+          </IconButton>
+          {isLogin && cartItemCount > 0 && (
+            <Box
+              sx={{
+                position: "absolute",
+                top: 4,
+                right: 4,
+                bgcolor: "var(--color-primary)",
+                color: "white",
+                borderRadius: "50%",
+                width: 20,
+                height: 20,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "0.75rem",
+                fontWeight: "bold",
+              }}
+            >
+              {cartItemCount > 99 ? "99+" : cartItemCount}
+            </Box>
+          )}
+        </Box>
       </Tooltip>
 
       {/* Login Required Dialog for Cart */}

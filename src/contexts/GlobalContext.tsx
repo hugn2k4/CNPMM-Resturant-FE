@@ -5,10 +5,14 @@ export interface GlobalState {
   user: User | null;
   accessToken: string | null;
   isLogin: boolean;
+  isLoading: boolean;
+  wishlistIds: Set<string>;
 }
 interface GlobalContextProps extends GlobalState {
   setGlobal: (state: Partial<GlobalState>) => void;
+  setUser: (user: User | null) => void;
   logout: () => void;
+  refreshWishlist: () => Promise<void>;
 }
 
 export const GlobalContext = createContext<GlobalContextProps | null>(null);
